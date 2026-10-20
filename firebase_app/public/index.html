@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <title></title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
+  <link rel="icon" href="assets/icons/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="styles.css">
+  <script src="site-config.js"></script>
+</head>
+<body>
+  <main id="app">
+    <section id="view-home" class="view" data-route="">
+      <header class="hero">
+        <div class="arch"><img class="arch-photo" id="hero-photo" alt=""></div>
+        <h1 class="names" id="hero-names"></h1>
+        <p class="hero-date" id="hero-date"></p>
+        <p class="hero-tagline" id="hero-tagline"></p>
+        <p class="countdown" id="hero-countdown" hidden></p>
+      </header>
+      <nav class="tiles" id="home-tiles"></nav>
+      <a class="contacts-strip" id="home-contacts" href="#contacts" hidden></a>
+    </section>
+
+    <section id="view-program" class="view inner" data-route="program" hidden>
+      <div class="inner-header"></div>
+      <div class="inner-body" id="program-body"></div>
+    </section>
+
+    <section id="view-stay" class="view inner" data-route="stay" hidden>
+      <div class="inner-header"></div>
+      <div class="inner-body">
+        <div class="search">
+          <label for="stay-search" id="stay-search-label"></label>
+          <input id="stay-search" type="search" autocomplete="off" autocorrect="off" autocapitalize="words" spellcheck="false" enterkeyhint="search">
+        </div>
+        <p class="result-count" id="stay-count" aria-live="polite"></p>
+        <ul class="stay-list" id="stay-list"></ul>
+      </div>
+    </section>
+
+    <section id="view-venues" class="view inner" data-route="venues" hidden>
+      <div class="inner-header"></div>
+      <div class="inner-body" id="venues-body"></div>
+    </section>
+
+    <section id="view-gallery" class="view inner" data-route="gallery" hidden>
+      <div class="inner-header"></div>
+      <div class="inner-body" id="gallery-body"></div>
+    </section>
+
+    <section id="view-contacts" class="view inner" data-route="contacts" hidden>
+      <div class="inner-header"></div>
+      <div class="inner-body" id="contacts-body"></div>
+    </section>
+  </main>
+
+  <div class="status-bar" id="status" role="status" hidden></div>
+  <div class="install-hint" id="install-hint" hidden></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

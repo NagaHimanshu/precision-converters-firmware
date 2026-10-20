@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 400">
+  <!-- Placeholder: replace with the couple's photo (portrait, about 3:4) and update images.hero in site-config.js -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F9E6E4"/>
+      <stop offset="1" stop-color="#F1CFCF"/>
+    </linearGradient>
+  </defs>
+  <rect width="300" height="400" fill="url(#bg)"/>
+  <g fill="none" stroke="#C9A227" stroke-width="5">
+    <circle cx="128" cy="190" r="34"/>
+    <circle cx="172" cy="190" r="34"/>
+  </g>
+  <text x="150" y="280" text-anchor="middle" font-family="Georgia, serif" font-size="18" fill="#8C6A12">Couple photo</text>
+  <text x="150" y="304" text-anchor="middle" font-family="Georgia, serif" font-size="14" fill="#6E5A5F">coming soon</text>
+</svg>
