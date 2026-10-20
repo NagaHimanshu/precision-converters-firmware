@@ -18,7 +18,7 @@ self.SITE_CONFIG = {
     id: "",
 
     // How each tab is read. {id} and {tab} are filled in automatically.
-    urlTemplate: "https://docs.google.com/spreadsheets/d/{id}/gviz/tq?tqx=out:csv&headers=1&sheet={tab}",
+    urlTemplate: "https://docs.google.com/spreadsheets/d/1MEXBdLLJq7gbCIpEdubQQ-DJOkBXsEsPMxGFsVrcEUQ/gviz/tq?tqx=out:csv&headers=1&sheet={tab}",
 
     // Tab names exactly as they appear at the bottom of the Google Sheet.
     tabs: {
@@ -60,7 +60,7 @@ self.SITE_CONFIG = {
   images: {
     // Couple photo shown at the top of the home screen.
     // Replace the file (e.g. assets/couple.jpg) and update this path.
-    hero: "assets/couple-placeholder.svg",
+    hero: "assets/couple.jpg",
     appIcon: "assets/icons/icon-192.png",
   },
 
