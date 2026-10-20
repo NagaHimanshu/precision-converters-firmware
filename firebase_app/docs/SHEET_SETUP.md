@@ -9,11 +9,8 @@ change the next time they open (or reopen) the site — no redeploy needed.
 1. Go to <https://sheets.google.com> and create a blank spreadsheet. Name it, e.g. "Wedding site data".
 2. Create five tabs (bottom of the screen) named **exactly**:
    `Settings`, `Program`, `Accommodation`, `Locations`, `Contacts`
-3. Fill each tab by importing the sample file from the `sample-data` folder:
-   open the tab → **File → Import → Upload** → pick e.g. `Program.csv` →
-   Import location: **Replace current sheet**, and **untick** "Convert text to
-   numbers, dates, and formulas". Repeat for each tab.
-   (Then replace the sample rows with your real details.)
+3. In row 1 of each tab, type the headers listed under [Columns](#columns)
+   below, then add your details from row 2 down.
 
 ## 2. Make every cell plain text (important)
 

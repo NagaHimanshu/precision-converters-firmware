@@ -14,11 +14,10 @@ self.SITE_CONFIG = {
   sheet: {
     // The long ID from the sheet URL:
     // https://docs.google.com/spreadsheets/d/<THIS PART>/edit
-    // Leave empty ("") to run on the sample data in data/sample.json.
-    id: "",
+    id: "1MEXBdLLJq7gbCIpEdubQQ-DJOkBXsEsPMxGFsVrcEUQ",
 
     // How each tab is read. {id} and {tab} are filled in automatically.
-    urlTemplate: "https://docs.google.com/spreadsheets/d/1MEXBdLLJq7gbCIpEdubQQ-DJOkBXsEsPMxGFsVrcEUQ/gviz/tq?tqx=out:csv&headers=1&sheet={tab}",
+    urlTemplate: "https://docs.google.com/spreadsheets/d/{id}/gviz/tq?tqx=out:csv&headers=1&sheet={tab}",
 
     // Tab names exactly as they appear at the bottom of the Google Sheet.
     tabs: {
@@ -52,9 +51,6 @@ self.SITE_CONFIG = {
     // "DMY" = 11/12/2026 means 11 December; "MDY" = 11/12/2026 means 12 November.
     dateOrder: "DMY",
   },
-
-  // Sample data used when sheet.id is empty.
-  sampleDataPath: "data/sample.json",
 
   /* ---------- Images & links ---------- */
   images: {

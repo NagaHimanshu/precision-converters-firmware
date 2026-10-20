@@ -20,11 +20,9 @@ public/              everything that gets published
   app.js             logic: loads the sheet, draws screens, search, countdown
   styles.css         layout; colours/fonts come from site-config.js
   site-config.js     settings (edit this)
-  data/sample.json   sample data, used while no sheet is connected
   sw.js              offline support
   manifest.webmanifest, assets/
-sample-data/*.csv    starter data to import into the Google Sheet
-tools/               scripts that regenerate sample data and icons (Python)
+tools/               script that regenerates the app icons (Python)
 firebase.json, .firebaserc   Firebase Hosting settings
 ```
 

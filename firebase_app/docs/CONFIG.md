@@ -10,15 +10,12 @@ Text values can use placeholders, filled from the Sheet's Settings tab:
 ## sheet
 | Key | What it does |
 |---|---|
-| `id` | Google Sheet ID. Empty = use `data/sample.json`. |
+| `id` | Google Sheet ID (required). |
 | `urlTemplate` | How a tab is fetched. Keep as is unless you switch to "Publish to web" CSV (`https://docs.google.com/spreadsheets/d/e/<pub-id>/pub?output=csv&sheet={tab}`). |
 | `tabs.*` | Tab names in the sheet. |
 | `columns.*` | Header text for each column. Change the right-hand side if your sheet uses different headers. |
 | `settingKeys.*` | Names used in the Settings tab's `key` column. |
 | `dateOrder` | `"DMY"` or `"MDY"` — how `11/12/2026` is read. `YYYY-MM-DD` is always unambiguous. |
-
-## sampleDataPath
-Path to the sample data used when `sheet.id` is empty.
 
 ## images
 | Key | What it does |

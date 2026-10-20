@@ -1,13 +1,12 @@
 /* Wedding site logic. Contains no wedding content: all text, links, images and
-   colours come from site-config.js; all wedding data comes from the Google Sheet
-   (or data/sample.json while no sheet is connected). */
+   colours come from site-config.js; all wedding data comes from the Google Sheet. */
 (function () {
   "use strict";
 
   const CFG = self.SITE_CONFIG;
   const T = CFG.text;
   const COLS = CFG.sheet.columns;
-  const CACHE_KEY = "site-data:" + (CFG.sheet.id || "sample");
+  const CACHE_KEY = "site-data:" + CFG.sheet.id;
   const HINT_KEY = "install-hint-dismissed";
   const REFRESH_AFTER_MS = 5 * 60 * 1000;
 
@@ -136,22 +135,10 @@
     return rows;
   }
 
-  function objectsToRows(list) {
-    const headers = [];
-    for (const obj of list) for (const k of Object.keys(obj)) if (!headers.includes(k)) headers.push(k);
-    return [headers, ...list.map((obj) => headers.map((k) => (obj[k] == null ? "" : String(obj[k]))))];
-  }
-
   async function fetchRaw() {
     const tabs = CFG.sheet.tabs;
     const raw = {};
-    if (!CFG.sheet.id) {
-      const res = await fetch(CFG.sampleDataPath, { cache: "no-store" });
-      if (!res.ok) throw new Error("sample " + res.status);
-      const json = await res.json();
-      for (const [key, tab] of Object.entries(tabs)) raw[key] = objectsToRows(json[tab] || []);
-      return raw;
-    }
+    if (!CFG.sheet.id) throw new Error("sheet.id is empty in site-config.js");
     // Each tab loads on its own, so one broken tab doesn't take down the others.
     const results = await Promise.allSettled(Object.entries(tabs).map(async ([key, tab]) => {
       const url = fill(CFG.sheet.urlTemplate, {
