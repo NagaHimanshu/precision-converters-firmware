@@ -15,6 +15,7 @@ Text values can use placeholders, filled from the Sheet's Settings tab:
 | `tabs.*` | Tab names in the sheet. |
 | `columns.*` | Header text for each column. Change the right-hand side if your sheet uses different headers. |
 | `settingKeys.*` | Names used in the Settings tab's `key` column. |
+| `showKeys.*` | Settings-tab keys that show/hide a section (`show_program`, `show_stay`, `show_venues`, `show_gallery`, `show_contacts`). |
 | `dateOrder` | `"DMY"` or `"MDY"` — how `11/12/2026` is read. `YYYY-MM-DD` is always unambiguous. |
 
 ## images
@@ -42,7 +43,13 @@ While both are empty the Gallery shows "coming soon".
 `fonts.script` / `fonts.body` — font names; `fonts.url` — the Google Fonts stylesheet that loads them (build one at <https://fonts.google.com>).
 
 ## features
-`true`/`false` switches: `countdown`, `nowNext`, `contacts`, `gallery`, `installHint`.
+`true`/`false` switches: `countdown`, `nowNext`, `installHint`.
+
+Sections: `program`, `stay`, `venues`, `gallery`, `contacts`. These are only
+**defaults**, used when the Settings tab has no `show_…` row for that section.
+A `show_…` row in the sheet always wins, and needs no redeploy — see
+[SHEET_SETUP.md → Showing or hiding sections](SHEET_SETUP.md#showing-or-hiding-sections).
+Currently `stay` and `gallery` default to hidden.
 
 ## nowWindowHours
 How long an event can stay "Happening now" if the next event is far away.
@@ -55,6 +62,9 @@ Every word shown on the site. Notable ones:
 | `countdownMany` | `"{days} days to go"` |
 | `tiles.*` | Labels on the home tiles |
 | `titles.*` | Titles at the top of each screen |
+| `stay.searchPlaceholder` | Grey text inside the search box (keep it short — it can't wrap) |
+| `stay.searchHint` | Small line under the search box; `""` hides it |
+| `stay.noHotel` | Heading for guests with no hotel filled in |
 | `stay.resultsMany` | `"{count} matches"` |
 | `status.dataUpdating` | Shown when a tab or column is missing in the sheet |
 

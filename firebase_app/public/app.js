@@ -9,6 +9,8 @@
   const CACHE_KEY = "site-data:" + CFG.sheet.id;
   const HINT_KEY = "install-hint-dismissed";
   const REFRESH_AFTER_MS = 5 * 60 * 1000;
+  const YES = /^(y|yes|true|1|on|show)$/i;
+  const NO = /^(n|no|false|0|off|hide)$/i;
 
   // Columns a tab cannot work without; others are optional.
   const REQUIRED = {
@@ -190,7 +192,18 @@
     for (const [field, key] of Object.entries(CFG.sheet.settingKeys)) s[field] = values[norm(key)] || "";
     m.info = s;
     m.vars = { bride: s.bride, groom: s.groom, city: s.city };
+    m.visible = {};
+    for (const [section, key] of Object.entries(CFG.sheet.showKeys)) {
+      const v = values[norm(key)] || "";
+      m.visible[section] = YES.test(v) ? true : NO.test(v) ? false : !!CFG.features[section];
+    }
     return m;
+  }
+
+  // Sections can be hidden from the Settings tab (or site-config.js before data loads).
+  function isVisible(section) {
+    if (!(section in CFG.sheet.showKeys)) return true;
+    return model ? model.visible[section] : !!CFG.features[section];
   }
 
   async function refresh() {
@@ -317,15 +330,14 @@
       cd.hidden = false;
     } else cd.hidden = true;
 
-    const tiles = ["program", "stay", "venues"];
-    if (CFG.features.gallery) tiles.push("gallery");
+    const tiles = ["program", "stay", "venues", "gallery"].filter(isVisible);
     $("home-tiles").replaceChildren(
       ...tiles.map((name) => h("a", { class: "tile", href: "#" + name }, icon(name), T.tiles[name]))
     );
 
     const strip = $("home-contacts");
     strip.replaceChildren(icon("phone"), T.contactsStrip);
-    strip.hidden = !(CFG.features.contacts && model.contacts.ok && model.contacts.rows.length);
+    strip.hidden = !(isVisible("contacts") && model.contacts.ok && model.contacts.rows.length);
   }
 
   /* ---------- Program ---------- */
@@ -422,13 +434,27 @@
 
   let stayIndex = [];
 
+  // Rows grouped by hotel (in the order hotels first appear, no hotel last),
+  // then sorted by room within each hotel.
   function prepareStay() {
     const rows = model.accommodation.ok ? model.accommodation.rows.slice() : [];
     const numeric = rows.every((r) => r.sno === "" || !isNaN(+r.sno));
     if (numeric) rows.sort((a, b) => (+a.sno || 0) - (+b.sno || 0));
+    const hotelRank = {};
+    for (const r of rows) {
+      const k = norm(r.hotel);
+      if (k && !(k in hotelRank)) hotelRank[k] = Object.keys(hotelRank).length;
+    }
+    const rank = (r) => (norm(r.hotel) ? hotelRank[norm(r.hotel)] : Infinity);
+    const byRoom = (a, b) => (!a.room - !b.room) ||
+      a.room.localeCompare(b.room, undefined, { numeric: true, sensitivity: "base" });
+    rows.sort((a, b) => (rank(a) - rank(b)) || byRoom(a, b));
+
+    // Searchable by name and by any alias (comma-separated). Aliases are never shown.
     stayIndex = rows.map((r) => {
-      const n = norm(r.name);
-      return { r, n, compact: n.replace(/ /g, "") };
+      const keys = [r.name, ...String(r.alias || "").split(",")].map(norm).filter(Boolean)
+        .map((n) => ({ n, compact: n.replace(/ /g, "") }));
+      return { r, keys };
     });
   }
 
@@ -436,6 +462,7 @@
     $("stay-search-label").textContent = T.stay.searchLabel;
     const input = $("stay-search");
     input.placeholder = T.stay.searchPlaceholder;
+    $("stay-search-hint").textContent = T.stay.searchHint;
     const list = $("stay-list");
     const count = $("stay-count");
 
@@ -449,8 +476,8 @@
     }
 
     const tokens = norm(input.value).split(" ").filter(Boolean);
-    const matches = stayIndex.filter((x) =>
-      tokens.every((t) => x.n.includes(t) || x.compact.includes(t)));
+    const matches = stayIndex.filter((x) => x.keys.some((k) =>
+      tokens.every((t) => k.n.includes(t) || k.compact.includes(t))));
 
     count.textContent = !tokens.length || !matches.length ? "" :
       matches.length === 1 ? T.stay.resultsOne : fill(T.stay.resultsMany, { count: matches.length });
@@ -458,18 +485,28 @@
     if (!matches.length) {
       return list.replaceChildren(h("li", { class: "no-match" },
         h("p", null, T.stay.noMatch),
-        CFG.features.contacts && h("a", { class: "btn btn-outline", href: "#contacts" },
+        isVisible("contacts") && h("a", { class: "btn btn-outline", href: "#contacts" },
           icon("phone"), T.stay.noMatchAction)));
     }
 
-    list.replaceChildren(...matches.map(({ r }) =>
-      h("li", { class: "stay-row" },
-        h("span", { class: "stay-sno" }, r.sno),
-        h("div", null,
-          h("div", { class: "stay-name" }, r.name),
-          r.hotel && h("div", { class: "stay-hotel" }, r.hotel),
-          r.note && h("div", { class: "stay-note" }, r.note)),
-        h("div", { class: "room" }, h("small", null, T.stay.room), h("strong", null, r.room)))
+    const groups = [];
+    for (const { r } of matches) {
+      let g = groups[groups.length - 1];
+      if (!g || g.key !== norm(r.hotel)) groups.push((g = { key: norm(r.hotel), hotel: r.hotel, rows: [] }));
+      g.rows.push(r);
+    }
+
+    list.replaceChildren(...groups.map((g) =>
+      h("li", { class: "stay-group" },
+        h("h3", { class: "stay-hotel-title" }, g.hotel || T.stay.noHotel),
+        h("ol", { class: "stay-rows" }, g.rows.map((r, i) =>
+          h("li", { class: "stay-row" },
+            h("span", { class: "stay-num" }, i + 1 + "."),
+            h("div", null,
+              h("div", { class: "stay-name" }, r.name),
+              r.note && h("div", { class: "stay-note" }, r.note)),
+            r.room && h("div", { class: "room" }, h("small", null, T.stay.room), h("strong", null, r.room)))))
+      )
     ));
   }
 
@@ -551,7 +588,11 @@
     renderVenues();
     renderGallery();
     renderContacts();
-    if (currentRoute() === "program") scrollProgramToNow();
+    // A section was just shown or hidden while its screen is the current one.
+    const route = currentRoute();
+    const view = [...document.querySelectorAll(".view")].find((v) => v.dataset.route === route);
+    if (route && view && view.hidden === isVisible(route)) showRoute();
+    if (route === "program") scrollProgramToNow();
   }
 
   function buildInnerHeaders() {
@@ -578,7 +619,7 @@
     const route = currentRoute();
     let found = false;
     for (const view of document.querySelectorAll(".view")) {
-      const match = view.dataset.route === route;
+      const match = view.dataset.route === route && (!route || isVisible(route));
       view.hidden = !match;
       if (match) found = true;
     }

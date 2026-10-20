@@ -48,6 +48,9 @@ ignored, so you can add your own notes columns.
 | wedding_date | 2026-12-12 |
 | city | Hyderabad |
 | tagline | Together with our families, we invite you to celebrate with us |
+| show_stay | no |
+
+The `show_…` rows are optional — see [Showing or hiding sections](#showing-or-hiding-sections).
 
 ### Program
 | date | time | event | venue | note |
@@ -60,11 +63,17 @@ ignored, so you can add your own notes columns.
 - Rows can be in any order; the site sorts by date and time.
 
 ### Accommodation
-| sno | name | hotel | room | note |
-|---|---|---|---|---|
-| 1 | Ravi Kumar | Hotel Sapphire | 101 | Check-in from 12 PM |
+| sno | name | alias | hotel | room | note |
+|---|---|---|---|---|---|
+| 1 | Priyanka | Peddakka | Hotel Sapphire | 101 | Check-in from 12 PM |
 
-Guests search by name. Partial names and any word order work.
+- Guests search by name. Partial names and any word order work.
+- **alias** (optional): what the family calls the person. It is **never shown**
+  on the site — it only helps search, so typing "peddakka" finds Priyanka.
+  Several aliases go in one cell separated by commas: `Peddakka, Akka`.
+- The list is grouped under each **hotel** (in the order hotels first appear in
+  the sheet) and sorted by **room** inside each hotel; the site numbers the
+  rows 1, 2, 3… itself. `sno` only decides the order for people in the same room.
 
 ### Locations
 | name | address | map_link | note |
@@ -82,6 +91,29 @@ Only links starting with `http` are used.
 - **phone**: 10-digit numbers get the country code from `site-config.js`
   (`whatsappCountryCode`). Or write it in full: `+91 98765 43210`.
 - **whatsapp**: `no` hides the WhatsApp button; anything else shows it.
+
+## Showing or hiding sections
+
+Program, Stay, Venues, Gallery and Contacts can each be hidden — the home tile
+disappears and the screen can't be opened, even from an old link. The data in
+the tab stays as it is, so you can fill it in early.
+
+In the **Settings** tab add a row (column `key`, column `value`):
+
+| key | value |
+|---|---|
+| show_program | yes |
+| show_stay | no |
+| show_venues | yes |
+| show_gallery | no |
+| show_contacts | yes |
+
+- Change `no` → `yes` to reveal a section (e.g. Stay one week before the wedding).
+  Guests see it the next time they open the site — no redeploy.
+- If a row is missing or blank, the default from `site-config.js` (`features`)
+  is used. Right now Stay and Gallery default to hidden; the rest are shown.
+- Hidden only means "not shown in the app". The sheet is readable by anyone
+  with its link, so don't rely on this for anything truly secret.
 
 ## Rules for helpers
 

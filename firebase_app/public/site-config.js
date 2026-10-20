@@ -33,7 +33,7 @@ self.SITE_CONFIG = {
     columns: {
       settings: { key: "key", value: "value" },
       program: { date: "date", time: "time", event: "event", venue: "venue", note: "note" },
-      accommodation: { sno: "sno", name: "name", hotel: "hotel", room: "room", note: "note" },
+      accommodation: { sno: "sno", name: "name", alias: "alias", hotel: "hotel", room: "room", note: "note" },
       locations: { name: "name", address: "address", mapLink: "map_link", note: "note" },
       contacts: { name: "name", role: "role", phone: "phone", whatsapp: "whatsapp" },
     },
@@ -45,6 +45,16 @@ self.SITE_CONFIG = {
       weddingDate: "wedding_date",
       city: "city",
       tagline: "tagline",
+    },
+
+    // Keys in the Settings tab that show or hide a section: value "yes" or "no".
+    // If a key is missing or blank, the matching switch under "features" is used.
+    showKeys: {
+      program: "show_program",
+      stay: "show_stay",
+      venues: "show_venues",
+      gallery: "show_gallery",
+      contacts: "show_contacts",
     },
 
     // How dates in the sheet are written when they are not YYYY-MM-DD:
@@ -96,9 +106,15 @@ self.SITE_CONFIG = {
   features: {
     countdown: true,               // "X days to go" on the home screen
     nowNext: true,                 // "Happening now" / "Up next" in the program
-    contacts: true,                // Contacts strip on the home screen
-    gallery: true,                 // Gallery tile
     installHint: true,             // "Add to Home Screen" tip
+
+    // Sections (home tile + screen). These are only the defaults: the Settings
+    // tab in the Google Sheet overrides them (show_stay = yes, etc.), no redeploy.
+    program: true,
+    stay: false,
+    venues: true,
+    gallery: false,
+    contacts: true,                // "Need help? Call us" strip + Contacts screen
   },
 
   // An event counts as "happening now" for at most this many hours
@@ -143,7 +159,8 @@ self.SITE_CONFIG = {
     stay: {
       searchLabel: "Find your name",
       searchPlaceholder: "Type your name",
-      hotel: "Hotel",
+      searchHint: "Or type what the bride calls you 😊",   // small line under the box; "" = none
+      noHotel: "Other",             // heading for rows with no hotel
       room: "Room",
       resultsOne: "1 match",
       resultsMany: "{count} matches",
