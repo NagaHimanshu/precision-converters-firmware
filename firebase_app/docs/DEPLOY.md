@@ -70,7 +70,7 @@ It prints the live address, e.g. `https://ananya-rohan.web.app`.
 - [ ] Venues: Navigate opens Google Maps
 - [ ] Contacts: Call and WhatsApp open correctly
 - [ ] Edit a cell in the sheet → reopen the site → the change shows
-- [ ] Add to Home Screen works (Android: "Add" prompt; iPhone: Share → Add to Home Screen)
+- [ ] Add to Home Screen works (Android: "Add" button in the tip; iPhone: Share → Add to Home Screen). The tip shows only on the home screen, and × hides it for good (also after reopening).
 - [ ] Airplane mode → reopen from home screen → details still show
 
 ## 9. Make the QR code

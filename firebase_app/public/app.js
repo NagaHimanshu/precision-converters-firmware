@@ -630,6 +630,7 @@
       if (title) title.focus({ preventScroll: true });
     }
     if (route === "program" && model) scrollProgramToNow();
+    updateInstallHint();
   }
 
   /* ---------- Status & install hint ---------- */
@@ -648,20 +649,38 @@
     $("status").hidden = true;
   }
 
+  // The tip shows only on the home screen and never again after ×.
+  let hintReady = false;
+  let hintDismissed = false;
+
+  function hintWasDismissed() {
+    return hintDismissed || !!storageGet(HINT_KEY) || document.cookie.includes(HINT_KEY + "=1");
+  }
+
+  function updateInstallHint() {
+    const box = $("install-hint");
+    box.hidden = !hintReady || hintWasDismissed() || $("view-home").hidden;
+  }
+
   function setupInstallHint() {
-    if (!CFG.features.installHint || storageGet(HINT_KEY)) return;
+    if (!CFG.features.installHint || hintWasDismissed()) return;
     const standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone;
     if (standalone) return;
-    const box = $("install-hint");
+
+    // Remembered three ways: in-app browsers (e.g. from WhatsApp) may drop localStorage.
+    function dismiss() {
+      hintDismissed = true;
+      storageSet(HINT_KEY, "1");
+      document.cookie = HINT_KEY + "=1; max-age=31536000; path=/; SameSite=Lax";
+      updateInstallHint();
+    }
 
     function show(message, action) {
+      if (hintWasDismissed()) return;
       const close = h("button", { class: "close", type: "button", "aria-label": T.install.dismiss, onclick: dismiss }, "×");
-      box.replaceChildren(h("p", null, message), action, close);
-      box.hidden = false;
-    }
-    function dismiss() {
-      box.hidden = true;
-      storageSet(HINT_KEY, "1");
+      $("install-hint").replaceChildren(...[h("p", null, message), action, close].filter(Boolean));
+      hintReady = true;
+      updateInstallHint();
     }
 
     const ua = navigator.userAgent;
