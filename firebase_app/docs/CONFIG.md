@@ -39,7 +39,7 @@ While both are empty the Gallery shows "coming soon".
 | `whatsappUrl` | WhatsApp link pattern; `{number}` is replaced. |
 
 ## theme
-`colors.*` — page colours (any CSS colour). `goldText` should stay dark enough to read on the light background.
+`colors.*` — page colours (any CSS colour). `goldText` and `joiner` (the "weds" between the names) should stay dark enough to read on the light background.
 `fonts.script` / `fonts.body` — font names; `fonts.url` — the Google Fonts stylesheet that loads them (build one at <https://fonts.google.com>).
 
 ## features
@@ -58,7 +58,8 @@ How long an event can stay "Happening now" if the next event is far away.
 Every word shown on the site. Notable ones:
 | Key | Example |
 |---|---|
-| `pageTitle` | Browser tab title: `"{bride} & {groom}"` |
+| `pageTitle` | Browser tab title: `"{bride} weds {groom}"` |
+| `heroJoiner` | Word between the names on the home screen: `"weds"` |
 | `countdownMany` | `"{days} days to go"` |
 | `tiles.*` | Labels on the home tiles |
 | `titles.*` | Titles at the top of each screen |

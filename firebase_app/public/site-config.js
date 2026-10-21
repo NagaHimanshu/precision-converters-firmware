@@ -89,6 +89,7 @@ self.SITE_CONFIG = {
       surface: "#FFFFFF",          // tiles and cards
       blush: "#F6DCDC",            // soft fills, borders
       rose: "#E8A0A8",             // accents, badges
+      joiner: "#B5485D",           // the "weds" between the names (deep rose, readable)
       gold: "#C9A227",             // frames, lines, icons
       goldText: "#8C6A12",         // gold used for text (darker, readable)
       ink: "#3E2B30",              // main text colour
@@ -123,8 +124,8 @@ self.SITE_CONFIG = {
 
   /* ---------- All text shown on the site ---------- */
   text: {
-    pageTitle: "{bride} & {groom}",
-    heroJoiner: "&",
+    pageTitle: "{bride} weds {groom}",
+    heroJoiner: "weds",
     heroPhotoAlt: "{bride} and {groom}",
 
     countdownMany: "{days} days to go",

@@ -77,7 +77,7 @@ a { color: inherit; }
 .names .joiner {
   display: block;
   font-size: 0.75em;
-  color: var(--rose);
+  color: var(--joiner);
   margin: 0.05em 0;
 }
 
