@@ -20,7 +20,7 @@ var CONFIG = {
   UPLOADS_KEY: "gallery_uploads",
   // Google sign-in OAuth client ID (the same value as gallery.googleClientId on the site).
   // Blank = Google sign-in is refused.
-  GOOGLE_CLIENT_ID: "",
+  GOOGLE_CLIENT_ID: "478674070390-cfa6vf8vrtsv01egt0eusgsih8olbfe7.apps.googleusercontent.com",
   // Google's address for checking a sign-in token (the token is sent in the request body).
   TOKENINFO_URL: "https://oauth2.googleapis.com/tokeninfo",
   // Name of the Drive folder setup() creates for the photos (shared: anyone with the link can view).

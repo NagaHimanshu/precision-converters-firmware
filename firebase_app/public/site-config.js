@@ -73,8 +73,8 @@ self.SITE_CONFIG = {
 
   /* ---------- Gallery (guest photo sharing) ---------- */
   gallery: {
-    endpoint: "",                  // Apps Script web app URL; "" = Gallery shows "coming soon"
-    googleClientId: "",            // Google OAuth client ID (public by design); "" = no sign-in shown
+    endpoint: "https://script.google.com/macros/s/AKfycbwteO3aU2rIHu0MPpr1wammPMLTrdRFmhwWbA6WhJV-RMqJmg8jjVVBkyxGJKcz6stX/exec", // Apps Script web app URL; "" = Gallery shows "coming soon"
+    googleClientId: "478674070390-cfa6vf8vrtsv01egt0eusgsih8olbfe7.apps.googleusercontent.com", // Google OAuth client ID (public by design); "" = no sign-in shown
     googleScriptUrl: "https://accounts.google.com/gsi/client",  // Google sign-in script (loaded only when needed)
     maxPhotosPerUpload: 20,        // photos accepted in one go
     parallelUploads: 2,            // photos sent at the same time
