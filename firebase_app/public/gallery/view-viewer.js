@@ -1,5 +1,6 @@
 /* Full-screen photo viewer: dark overlay, uncropped photo, arrows and swipe,
-   "By {name}" + time, big heart, Delete on your own photo. The phone's Back
+   "By {name}" + time, big heart, Delete on your own photo, Save (to the phone's
+   Downloads, with a short note at the bottom). The phone's Back
    closes it (it adds one history entry while open). It closes by itself when the
    photo it shows leaves the list (deleted). */
 (function () {
@@ -14,6 +15,12 @@
   // If Back somehow never arrives after × (it always should), close anyway after this long.
   const BACK_FALLBACK_MS = 800;
 
+  // A saved photo's temporary address is let go this long after the download starts.
+  const SAVE_URL_LIFE_MS = 60000;
+
+  // File name ending for each kind of picture Save may get (anything else: jpg).
+  const EXTENSIONS = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif" };
+
   // onDelete(id): Delete was tapped on the photo shown (the caller asks Remove / Keep first).
   function create({ ctx, store, onDelete }) {
     const { text, h, fill, icon } = ctx;
@@ -26,8 +33,15 @@
     let preloads = [];
     const pointers = new Set();
     let swipeFrom = null;
+    const saving = new Set();   // ids of photos being fetched for Save
+    let toastTimer = 0;
 
     const counter = h("span", { class: "g-v-counter" });
+    const saveLabel = h("span", { class: "g-v-save-label" }, text.save);
+    const saveBars = h("span", { class: "loading-bars g-v-save-bars", "aria-hidden": "true" },
+      h("span"), h("span"), h("span"));
+    const saveButton = h("button", { type: "button", class: "g-v-save", "data-g": "viewer-save",
+      onclick: () => openId && save(openId) }, saveLabel);
     const closeButton = h("button", { type: "button", class: "g-v-round g-v-close", "data-g": "viewer-close",
       "aria-label": text.close, onclick: () => close() }, "×");
     const img = h("img", { class: "g-v-img", alt: "", decoding: "async",
@@ -47,9 +61,10 @@
       onclick: () => openId && !deleteButton.disabled && onDelete(openId) }, text.delete);
     const actions = h("div", { class: "g-v-actions" });
     const status = h("p", { class: "g-v-status", "data-g": "viewer-status", role: "status", hidden: "" });   // why a delete didn't work
+    const toast = h("p", { class: "g-v-toast", "data-g": "viewer-toast", role: "status", hidden: "" });     // "Saved to Downloads"
     const el = h("div", { class: "g-viewer", "data-g": "viewer", role: "dialog", "aria-modal": "true", hidden: "" },
-      h("div", { class: "g-v-top" }, counter, closeButton),
-      stage, prevButton, nextButton, status,
+      h("div", { class: "g-v-top" }, counter, h("div", { class: "g-v-top-actions" }, saveButton, closeButton)),
+      stage, prevButton, nextButton, status, toast,
       h("div", { class: "g-v-bar" }, h("div", { class: "g-v-by", "data-g": "viewer-by" }, byName, when), actions));
 
     /* ---------- time line ---------- */
@@ -124,6 +139,68 @@
       nextButton.hidden = last && !s.next;
       if (last && s.next && !s.error) store.loadMore();
       preload(s.photos, i);
+      renderSave();
+    }
+
+    /* ---------- Save ---------- */
+
+    // Three bars in place of the words while the photo shown is being fetched.
+    function renderSave() {
+      const busy = !!openId && saving.has(openId);
+      saveButton.disabled = busy;
+      saveButton.classList.toggle("is-busy", busy);
+      saveButton.setAttribute("aria-busy", String(busy));
+      if (busy) saveButton.replaceChildren(saveLabel, saveBars);
+      else saveButton.replaceChildren(saveLabel);
+    }
+
+    function showToast(message) {
+      clearTimeout(toastTimer);
+      toast.textContent = message;
+      toast.hidden = false;
+      toastTimer = setTimeout(() => { toast.hidden = true; }, G.toastMs);
+    }
+
+    // The photo as a file. A download link can't save a picture from another site by itself,
+    // so it is read here first (downloadUrl must allow that). Only a real picture counts.
+    async function fetchPhoto(id) {
+      const stop = new AbortController();
+      const timer = setTimeout(() => stop.abort(), G.downloadTimeoutMs);
+      try {
+        const res = await fetch(fill(G.downloadUrl, { id: encodeURIComponent(id), size: G.downloadSizePx }),
+          { mode: "cors", credentials: "omit", signal: stop.signal });
+        if (!res.ok) throw new Error("status " + res.status);
+        const blob = await res.blob();
+        if (!blob.size || !/^image\//i.test(blob.type)) throw new Error("not a photo");
+        return blob;
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+
+    function download(blob, id) {
+      const type = blob.type.split(";")[0].trim().toLowerCase();
+      const name = fill(G.downloadName, { id: String(id).replace(/[^\w-]/g, ""), ext: EXTENSIONS[type] || "jpg" });
+      const url = URL.createObjectURL(blob);
+      const link = h("a", { href: url, download: name, hidden: "" });
+      document.body.append(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), SAVE_URL_LIFE_MS);
+    }
+
+    async function save(id) {
+      if (saving.has(id)) return;
+      saving.add(id);
+      renderSave();
+      let saved = false;
+      try {
+        download(await fetchPhoto(id), id);
+        saved = true;
+      } catch (e) { /* said below */ }
+      saving.delete(id);
+      renderSave();
+      if (isOpen()) showToast(saved ? text.saved : text.saveFailed);
     }
 
     function step(d) {
@@ -164,6 +241,8 @@
       openId = null;
       preloads = [];
       img.removeAttribute("src");     // frees the big picture
+      clearTimeout(toastTimer);
+      toast.hidden = true;
       document.documentElement.classList.remove("g-viewer-open");
       if (lastFocus && lastFocus.isConnected) lastFocus.focus({ preventScroll: true });
     }

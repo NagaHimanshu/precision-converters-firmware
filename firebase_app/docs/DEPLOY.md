@@ -114,6 +114,13 @@ phones with the real Google backend.
       minute; tapping again takes it back
 - [ ] Open a photo: swipe left/right and the arrow buttons move between photos;
       the phone's Back closes the photo and stays in the Gallery
+- [ ] Open a photo → **⬇ Save** (top, next to ×): three bars, then "Saved to Downloads".
+      **Android (Chrome):** the photo is in the Downloads folder / Files app, sharp (not a
+      small copy), named `Rishika-Vamsi-wedding-….jpg`. **iPhone (Safari):** Safari may ask
+      "Download?" first; the photo is in **Files → Downloads** (not in the Photos app).
+      Also try once from the **home-screen icon** on both phones (an iPhone may open the
+      photo instead of saving it — note what it does). Airplane mode → Save:
+      "Couldn't save. Try again."
 - [ ] **Photos by me** → open one of yours → **Delete** → **Remove**: it disappears on
       both phones, and the file is in the Drive trash
 - [ ] Move a photo to the trash directly in Drive: it disappears from the site within

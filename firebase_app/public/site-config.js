@@ -93,6 +93,14 @@ self.SITE_CONFIG = {
     fullSizePx: 1600,              // full-screen picture width
     thumbUrl: "https://drive.google.com/thumbnail?id={id}&sz=w{size}",  // grid picture address
     fullUrl: "https://drive.google.com/thumbnail?id={id}&sz=w{size}",   // full-screen picture address
+    // Save button in the full-screen viewer: the photo is fetched from this address (it must
+    // allow other sites to read it — Drive's thumbnail address above doesn't) and saved to the
+    // phone's Downloads. {id} and {size} are filled in.
+    downloadUrl: "https://lh3.googleusercontent.com/d/{id}=w{size}",
+    downloadSizePx: 2500,          // saved photo width (the uploads are at most maxLongEdgePx anyway)
+    downloadName: "Rishika-Vamsi-wedding-{id}.{ext}",   // saved file name; {ext} = jpg, png, …
+    downloadTimeoutMs: 30000,      // give up saving one photo after this long
+    toastMs: 3000,                 // how long "Saved to Downloads" stays on screen
     refreshIntervalMs: 60000,      // how often new photos are looked for while the Gallery is open
     nameMaxLength: 40,             // longest name shown on a photo
     addButtonWidth: "76%",         // width of the "Add photos" button
@@ -260,6 +268,9 @@ self.SITE_CONFIG = {
       prev: "Previous photo",
       next: "Next photo",
       delete: "🗑 Delete",
+      save: "⬇ Save",              // full-screen viewer: saves the photo to the phone
+      saved: "Saved to Downloads",  // small note at the bottom after Save
+      saveFailed: "Couldn't save. Try again.",
       confirmTitle: "Remove this photo for everyone?",
       confirmRemove: "Remove",
       confirmKeep: "Keep",
@@ -316,6 +327,7 @@ self.SITE_CONFIG = {
           heading: "Where photos are kept",
           paragraphs: [
             "Uploaded to Rishika's Google Drive.",
+            "Guests can save photos shown in the Gallery.",
           ],
         },
         {

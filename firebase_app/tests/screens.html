@@ -18,6 +18,9 @@
   <figure><figcaption>Home</figcaption><iframe src="/"></iframe></figure>
   <figure><figcaption>Gallery: mock=ok</figcaption><iframe src="/index.html?mock=ok#gallery"></iframe></figure>
   <figure><figcaption>Viewer: mock=ok, second photo opened</figcaption><iframe data-open-viewer src="/index.html?mock=ok#gallery"></iframe></figure>
+  <figure><figcaption>Viewer: Save tapped, photo on its way (bars)</figcaption><iframe data-open-viewer data-save="busy" src="/index.html?mock=ok#gallery"></iframe></figure>
+  <figure><figcaption>Viewer: Save done ("Saved to Downloads")</figcaption><iframe data-open-viewer data-save="done" src="/index.html?mock=ok#gallery"></iframe></figure>
+  <figure><figcaption>Viewer: Save failed</figcaption><iframe data-open-viewer data-save="fail" src="/index.html?mock=ok#gallery"></iframe></figure>
   <figure><figcaption>mock=empty</figcaption><iframe src="/index.html?mock=empty#gallery"></iframe></figure>
   <figure><figcaption>mock=down (HTTP 500), first visit</figcaption><iframe src="/index.html?mock=down&amp;fresh=1#gallery"></iframe></figure>
   <figure><figcaption>mock=html (sign-in page), first visit</figcaption><iframe src="/index.html?mock=html&amp;fresh=1#gallery"></iframe></figure>
@@ -134,9 +137,32 @@
     (function poll() {
       var tile = f.contentDocument && f.contentDocument.querySelectorAll('[data-g="tile"] img')[1];
       if (tile) tile.click();
-      else setTimeout(poll, 100);
+      else return setTimeout(poll, 100);
+      if (f.dataset.save) save(f);
     })();
   });
+
+  // data-save: taps Save in the open viewer. busy = the photo never arrives; fail = it
+  // fails; done = it arrives (the download itself is stopped, so nothing is saved here).
+  function save(f) {
+    var w = f.contentWindow, d = f.contentDocument;
+    w.SITE_CONFIG.gallery.toastMs = 600000;   // still showing when the picture is taken
+    d.addEventListener("click", function (e) {
+      if (e.target.tagName === "A" && e.target.hasAttribute("download")) e.preventDefault();
+    }, true);
+    var realFetch = w.fetch;
+    w.fetch = function (url, opts) {
+      if (String(url).indexOf("/mock-api/img/") < 0) return realFetch.call(w, url, opts);
+      if (f.dataset.save === "busy") return new Promise(function () {});
+      if (f.dataset.save === "fail") return Promise.reject(new TypeError("Failed to fetch"));
+      return realFetch.call(w, url, opts);
+    };
+    (function press() {
+      var b = d.querySelector('#gallery-body [data-g="viewer-save"]');
+      if (b) b.click();
+      else setTimeout(press, 100);
+    })();
+  }
 </script>
 </body>
 </html>

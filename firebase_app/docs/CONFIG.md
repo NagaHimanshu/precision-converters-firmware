@@ -48,6 +48,11 @@ Setting it up (Drive, Apps Script, Google sign-in): [GALLERY_SETUP.md](GALLERY_S
 | `thumbSizePx` / `fullSizePx` | Picture width for the grid / for full screen. |
 | `thumbRetries` | A grid picture that didn't load (e.g. a photo shared a moment ago, or Google busy) is asked for again on each refresh, at most this many times; then it stays a soft grey square. A photo shared from this phone shows its own small copy meanwhile. |
 | `thumbUrl` / `fullUrl` | Picture address patterns; `{id}` and `{size}` are filled in. |
+| `downloadUrl` | Where **⬇ Save** in the full-screen viewer fetches the photo from (`{id}`, `{size}` filled in). It must let other websites read the picture: Drive's `thumbnail` address (used above) doesn't, `https://lh3.googleusercontent.com/d/{id}=w{size}` does. |
+| `downloadSizePx` | Width of the saved photo. Uploads are at most `maxLongEdgePx` anyway, so `2500` = the copy that was shared. |
+| `downloadName` | Saved file name: `{id}` = the photo's Drive id, `{ext}` = `jpg` (or `png`, `webp`, … if Google sends that). |
+| `downloadTimeoutMs` | Give up saving one photo after this long; the guest sees `text.gallery.saveFailed`. |
+| `toastMs` | How long the small note after Save ("Saved to Downloads") stays on screen. |
 | `refreshIntervalMs` | How often new photos are looked for while the Gallery is open. |
 | `nameMaxLength` | Longest name shown on a photo. |
 | `addButtonWidth` | Width of the "Add photos" button (e.g. `76%`). |
@@ -150,6 +155,8 @@ Placeholders in `{braces}` are filled in by the site; keep them.
 | `heartLabel` | Spoken label of the heart button |
 | `close` / `prev` / `next` | Spoken labels of the viewer's ×, ‹ and › buttons |
 | `delete` | Delete button on your own photos (Photos by me tiles and the viewer) |
+| `save` | Save button at the top of the full-screen viewer, next to × (three moving bars replace it while the photo is fetched) |
+| `saved` / `saveFailed` | Small black note at the bottom after Save worked / didn't. Browsers never tell the site the real folder, so keep it general ("Saved to Downloads") |
 | `confirmTitle` / `confirmRemove` / `confirmKeep` | The "remove this photo?" question and its two buttons |
 | `otherPhoneTitle` | Heading above Google's sign-in button at the end of Photos by me |
 | `signInNote` | Small line under that button |

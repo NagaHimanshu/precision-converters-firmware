@@ -2,7 +2,7 @@
 
 A lightweight phone-friendly site for wedding guests, shared by QR code.
 No app store, no login. Screens: Program, Stay (room search), Venues,
-Gallery (guests share and heart photos; optional Google sign-in), Contacts.
+Gallery (guests share, heart and save photos; optional Google sign-in), Contacts.
 
 ## Where things live
 

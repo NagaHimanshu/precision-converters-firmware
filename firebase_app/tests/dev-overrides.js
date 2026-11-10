@@ -26,6 +26,7 @@
     if (q.get("break") === "load") C.gallery.scriptLoadTimeoutMs = 1500;
     C.gallery.thumbUrl = "/mock-api/img/{id}?w={size}";
     C.gallery.fullUrl = "/mock-api/img/{id}?w={size}";
+    C.gallery.downloadUrl = "/mock-api/img/{id}?w={size}";
     // Google sign-in: the stand-in GIS script (gis=broken makes it define nothing);
     // noclient=1: no client ID, so no sign-in anywhere.
     C.gallery.googleScriptUrl = "/tests/fake-gis.js";

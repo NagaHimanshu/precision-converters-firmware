@@ -731,6 +731,128 @@
     });
   });
 
+  /* ---------- Save (download) in the viewer ---------- */
+
+  // Swaps fetch for answer(url) and catches the <a download> clicks (no real download).
+  // Returns { fetched: [urls], clicks: [{ href, download }], restore() }.
+  function fakeDownload(answer) {
+    var s = { fetched: [], clicks: [] };
+    var realFetch = self.fetch;
+    self.fetch = function (url) { s.fetched.push(String(url)); return answer(String(url)); };
+    function onClick(e) {
+      var a = e.target;
+      if (a && a.tagName === "A" && a.hasAttribute("download")) {
+        e.preventDefault();
+        s.clicks.push({ href: a.href, download: a.getAttribute("download") });
+      }
+    }
+    document.addEventListener("click", onClick, true);
+    s.restore = function () { self.fetch = realFetch; document.removeEventListener("click", onClick, true); };
+    return s;
+  }
+
+  function jpeg() {
+    return Promise.resolve(new Response(new Blob([new Uint8Array([255, 216, 255, 217])], { type: "image/jpeg" }),
+      { status: 200, headers: { "Content-Type": "image/jpeg" } }));
+  }
+
+  // Runs body(d, v) with fetch faked and a 3-photo viewer open; always puts fetch back and
+  // closes the viewer, even when body throws before its first promise.
+  function withSave(answer, body) {
+    var d = fakeDownload(answer);
+    var v = null;
+    return Promise.resolve().then(function () {
+      v = viewerOf3();
+      return body(d, v);
+    }).then(function (r) { d.restore(); return r; }, function (e) {
+      d.restore();
+      if (v) { if (v.isOpen()) v.close(); v.el.remove(); }
+      throw e;
+    });
+  }
+
+  function saveButton(v) { return v.el.querySelector('[data-g="viewer-save"]'); }
+  function toast(v) { return v.el.querySelector('[data-g="viewer-toast"]'); }
+
+  test("viewer Save downloads the best copy with the right name", function () {
+    var G0 = self.SITE_CONFIG.gallery;
+    var toastMs = G0.toastMs;
+    G0.toastMs = 300;
+    return withSave(jpeg, function (d, v) {
+      v.el.querySelector('[data-g="viewer-next"]').click();
+      var label = saveButton(v) && saveButton(v).textContent;
+      saveButton(v).click();
+      var said, role, again;
+      return waitFor(function () { return d.clicks.length && !toast(v).hidden; }, "saved").then(function () {
+        said = toast(v).textContent;
+        role = toast(v).getAttribute("role");
+        return waitFor(function () { return toast(v).hidden; }, "toast gone");
+      }).then(function () {
+        again = saveButton(v).disabled;
+        return shut(v);
+      }).then(function () {
+        eq(label, T().save);
+        eq(d.fetched, [fill(G0.downloadUrl, { id: "s2", size: G0.downloadSizePx })]);
+        eq(d.clicks.length, 1, "one download");
+        eq(d.clicks[0].download, fill(G0.downloadName, { id: "s2", ext: "jpg" }));
+        ok(d.clicks[0].href.indexOf("blob:") === 0, "not a blob address: " + d.clicks[0].href);
+        eq(said, T().saved);
+        eq(role, "status");
+        ok(!again, "Save stuck after saving");
+      });
+    }).finally(function () { G0.toastMs = toastMs; });
+  });
+
+  test("viewer Save shows bars while fetching and says when it failed", function () {
+    var release;
+    return withSave(function () {
+      return new Promise(function (r) { release = r; });
+    }, function (d, v) {
+      saveButton(v).click();
+      saveButton(v).click();   // a second tap while busy does nothing
+      var busy = saveButton(v).disabled;
+      var bars = !!saveButton(v).querySelector(".loading-bars");
+      var asked = d.fetched.length;
+      release(new Response("<html>nope</html>", { status: 404, headers: { "Content-Type": "text/html" } }));
+      var said, after, label;
+      return waitFor(function () { return !toast(v).hidden; }, "toast").then(function () {
+        said = toast(v).textContent;
+        after = saveButton(v).disabled;
+        label = saveButton(v).textContent;
+        return shut(v);
+      }).then(function () {
+        ok(busy, "Save tappable while fetching");
+        ok(bars, "no bars while fetching");
+        eq(asked, 1, "fetched twice");
+        eq(said, T().saveFailed);
+        eq(d.clicks, [], "a failed answer was saved");
+        ok(!after, "Save stuck after a failure");
+        eq(label, T().save);
+      });
+    });
+  });
+
+  test("viewer Save never saves a page that isn't a photo, or when offline", function () {
+    var answers = [
+      function () { return Promise.resolve(new Response("<html></html>", { status: 200, headers: { "Content-Type": "text/html" } })); },
+      function () { return Promise.reject(new TypeError("Failed to fetch")); },
+    ];
+    var said = [];
+    return withSave(function () { return answers.shift()(); }, function (d, v) {
+      function once() {
+        toast(v).hidden = true;
+        saveButton(v).click();
+        return waitFor(function () { return !toast(v).hidden && !saveButton(v).disabled; }, "toast").then(function () {
+          said.push(toast(v).textContent);
+        });
+      }
+      return once().then(once).then(function () { return shut(v); }).then(function () {
+        eq(said, [T().saveFailed, T().saveFailed]);
+        eq(d.clicks, [], "something was saved");
+      });
+    });
+  });
+
   /* ---------- Google sign-in card (Photos by me) ---------- */
 
   // A grid with sign-in switched on; mounted = the elements the Google button went into.
