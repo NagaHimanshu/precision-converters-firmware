@@ -4,6 +4,9 @@ Do this once to put the site online. After that, wedding data changes happen
 in the Google Sheet only; you redeploy only when `site-config.js` or the
 photo changes.
 
+First time with the Gallery: do steps 1–7, then the **beta release** (step 8) to test
+on real phones, and only then go live (step 9).
+
 ## 1. Copy the project
 
 Copy the whole `firebase_app` folder (USB / zip / git) to the other PC.
@@ -55,14 +58,92 @@ Open the address it prints (usually <http://localhost:5000>). Stop with Ctrl+C.
 Follow [SHEET_SETUP.md](SHEET_SETUP.md), then put the sheet ID into
 `public/site-config.js` → `sheet.id`.
 
-## 7. Deploy
+## 7. Set up the Gallery (one time)
 
+Follow [GALLERY_SETUP.md](GALLERY_SETUP.md) Parts 1–4 (and Part 5 if you want Google
+sign-in). At the end, `gallery.endpoint` in `public/site-config.js` holds the Web app URL.
+
+## 8. Beta release
+
+A beta release puts the site on a separate test address. Guests never see it; the live
+address stays as it is. The beta and the live site use the **same** Sheet, Drive folder
+and backend, so photos you add on the beta are real photos in the folder (step 8.6 clears
+them).
+
+1. In a terminal in the project folder:
+   ```
+   firebase hosting:channel:deploy beta --expires 30d
+   ```
+   It ends with a line like
+   `Channel URL (beta): https://rishika-vamsi-wedding--beta-ab12cd34.web.app [expires ...]`.
+   Open that address on the PC: the home screen should show.
+2. If you set up Google sign-in: add that address (exactly, no `/` at the end) to
+   **Authorized JavaScript origins** ([GALLERY_SETUP.md → Part 5b](GALLERY_SETUP.md#5b-the-client-id)).
+   It can take a few minutes, sometimes hours, to start working.
+3. In the Sheet's Settings tab: `show_gallery` = `yes`, `gallery_uploads` = `yes`.
+   (The live address reads the same Sheet, so its Gallery tile appears too. That's fine
+   while the site isn't shared yet.)
+4. Send the beta address to your phones (e.g. WhatsApp it to yourself) and go through the
+   checklist below on **at least one iPhone and one Android phone**.
+5. Changed something? Run the same command again: the beta address stays the same (and
+   gets 30 more days).
+6. **Clear the test photos before going live:** open the photos folder in Drive (the link
+   from GALLERY_SETUP Part 2) → select all photos (Ctrl+A) → right-click → **Move to
+   trash**. Wait `SYNC_MINUTES` (15 minutes) and reopen the Gallery: it should say
+   "No photos yet". Then empty the Drive trash (or leave it; Drive empties it after 30
+   days). Don't restore them afterwards, or they come back to the site.
+
+### Real-phone checklist (beta)
+
+Everything else is tested on the development PC; these can only be checked on real
+phones with the real Google backend.
+
+- [ ] Home, Program, Stay, Venues and Contacts work as before
+- [ ] Gallery opens and shows "No photos yet" (or the photos so far)
+- [ ] **Add photos** → pick 5–10 photos → "Ready to share" → type a name → **Upload**:
+      the rings fill, the photos appear in the grid, and in the Drive photos folder
+- [ ] A name starting with `=`, `+`, `-` or `@` (e.g. `=Ravi`, `+Uncle`, `-Anu`,
+      `@Sita`) shows on the photo exactly as typed, with no `'` in front
+- [ ] Heart a photo: the count goes up; on the other phone the count shows after a
+      minute; tapping again takes it back
+- [ ] Open a photo: swipe left/right and the arrow buttons move between photos;
+      the phone's Back closes the photo and stays in the Gallery
+- [ ] **Photos by me** → open one of yours → **Delete** → **Remove**: it disappears on
+      both phones, and the file is in the Drive trash
+- [ ] Move a photo to the trash directly in Drive: it disappears from the site within
+      `SYNC_MINUTES` (15 minutes). Restore it: it comes back within 15 minutes
+- [ ] Set `gallery_uploads` to `no`: within about 1–5 minutes "Photo sharing is paused
+      for now." replaces Add photos. Try `hide` as well. Set it back to `yes`: Add photos
+      returns
+- [ ] If sign-in is set up: Photos by me → "Shared photos from another phone?" → Google
+      button → sign in. Works in **Chrome** (Android) and **Safari** (iPhone), then shows
+      "Signed in as …". Sign in on the second phone with the same account: the first
+      phone's photos show under Photos by me there too. **Sign out** works
+- [ ] Open the beta link from inside **WhatsApp** and **Instagram** (tap it in a chat):
+      the Gallery works and photos can be added; sign-in either works or says "Sign-in
+      isn't available here. You can still add photos." (or Google shows its own error
+      page instead of that message after the Google button is tapped: expected there) —
+      never a blank screen or an error code from the site
+- [ ] Storage warning email: in the Apps Script editor set `STORAGE_WARN_PERCENT` in
+      `Config.gs` to a number below your current Drive use (drive.google.com shows
+      "… of 15 GB used"; `1` always works) → publish a new version
+      ([GALLERY_SETUP.md](GALLERY_SETUP.md#after-changing-any-gs-file-publish-a-new-version))
+      → add one photo → the "Google Drive is …% full" email arrives at the email in
+      `Config.gs` (check Spam). Set it back to `85` and publish a new version again.
+      It comes at most once a day, so this test works once per day
+- [ ] Airplane mode → reopen the Gallery: the photos seen before still show, with
+      "Showing photos saved on this phone."
+
+## 9. Go live
+
+When the beta is good and the test photos are cleared:
 ```
 firebase deploy --only hosting
 ```
-It prints the live address, e.g. `https://ananya-rohan.web.app`.
+It prints the live address, e.g. `https://rishika-vamsi-wedding.web.app`. Open the
+Gallery there once to check it loads.
 
-## 8. Check on phones
+## 10. Check on phones
 
 - [ ] Opens on Android (Chrome) and iPhone (Safari)
 - [ ] Names and date show; tiles open each screen; back button works
@@ -73,7 +154,7 @@ It prints the live address, e.g. `https://ananya-rohan.web.app`.
 - [ ] Add to Home Screen works (Android: "Add" button in the tip; iPhone: Share → Add to Home Screen). The tip shows only on the home screen, and × hides it for good (also after reopening).
 - [ ] Airplane mode → reopen from home screen → details still show
 
-## 9. Make the QR code
+## 11. Make the QR code
 
 Use the `.web.app` address. Either:
 - any free QR generator website (download as PNG/SVG), or
@@ -88,7 +169,13 @@ Android and an iPhone camera.
 |---|---|
 | Program, rooms, venues, contacts, names, date | Edit the Google Sheet. Done. |
 | Couple photo | Put the photo in `public/assets/` (portrait, about 900 px wide, under 300 KB), set `images.hero` in `site-config.js`, run `firebase deploy --only hosting` |
-| Labels, colours, gallery links, features | Edit `site-config.js`, run `firebase deploy --only hosting` |
+| Labels, colours, gallery settings, features | Edit `site-config.js`, run `firebase deploy --only hosting` (for bigger changes, the beta first: step 8) |
+| Pause / reopen adding photos | Sheet → Settings → `gallery_uploads` = `no` / `yes`. Done (about 1–5 minutes). |
+| Hide / show the Gallery | Sheet → Settings → `show_gallery` = `no` / `yes`. Done. |
+| Remove a guest's photo | Drive photos folder → right-click → **Move to trash**. Gone within `SYNC_MINUTES` ([GALLERY_SETUP.md → Deleting photos](GALLERY_SETUP.md#deleting-photos)) |
+| Gallery backend settings (`Config.gs`: storage levels, sign-in client ID, …) | Change it in the Apps Script editor → Deploy → Manage deployments → Edit → **New version**. Copy the same change into `apps-script/Config.gs` in the project folder so the two stay alike |
+| New versions of the `apps-script/*.gs` files | Paste each into the editor (keep your `Config.gs` values) → **New version**. The Web app URL stays the same |
+| Google sign-in addresses (new beta or domain) | Google Cloud → Clients → `Wedding site` → **Authorized JavaScript origins** → Add URI → Save |
 | App name shown under the home-screen icon | Edit `name`/`short_name` in `public/manifest.webmanifest`, redeploy |
 
 ## After the wedding

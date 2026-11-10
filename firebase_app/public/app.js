@@ -531,20 +531,113 @@
 
   /* ---------- Gallery ---------- */
 
-  function renderGallery() {
-    const body = $("gallery-body");
-    const { galleryAlbum, galleryUpload } = CFG.links;
-    if (!galleryAlbum && !galleryUpload) {
-      return body.replaceChildren(h("div", { class: "coming-soon" },
-        icon("gallery"),
-        h("h3", null, T.gallery.comingSoonTitle),
-        h("p", null, T.gallery.comingSoonBody)));
+  // The gallery code is only fetched when the Gallery screen is opened, and any
+  // failure in it shows a calm card instead of touching the rest of the site.
+  const GALLERY_FILES = [
+    "gallery/gallery.css", "gallery/errors.js", "gallery/api.js", "gallery/identity.js",
+    "gallery/image.js", "gallery/store.js", "gallery/uploader.js", "gallery/view-grid.js",
+    "gallery/view-viewer.js", "gallery/view-panel.js", "gallery/gallery.js",
+  ];
+  let gallery = null;           // the mounted module
+  let galleryState = "idle";    // idle | loading | ready | failed
+  let galleryRun = 0;           // bumped by each try; a late answer from an older one is dropped
+
+  // async = false: the files all download at once and still run in list order.
+  function insertGalleryFile(file) {
+    return new Promise((resolve, reject) => {
+      const node = file.endsWith(".css")
+        ? h("link", { rel: "stylesheet", href: file })
+        : h("script", { src: file });
+      node.dataset.galleryFile = "1";
+      node.async = false;
+      node.onload = () => resolve();
+      node.onerror = () => reject(new Error("could not load " + file));
+      document.head.append(node);
+    });
+  }
+
+  // A try again asks for the same addresses (the saved copy can help on a slow network;
+  // the site's no-cache headers and the service worker's network-first keep them fresh).
+  function loadGallery() {
+    document.querySelectorAll("[data-gallery-file]").forEach((n) => n.remove());   // the failed try's
+    const files = Promise.all(GALLERY_FILES.map(insertGalleryFile));
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error("gallery files timed out")), CFG.gallery.scriptLoadTimeoutMs);
+      files.then(() => { clearTimeout(timer); resolve(); }, (e) => { clearTimeout(timer); reject(e); });
+    });
+  }
+
+  function uploadsOpen() {
+    return !NO.test(model.info.galleryUploads);
+  }
+
+  function galleryCard(...kids) {
+    $("gallery-body").replaceChildren(h("div", { class: "coming-soon" }, icon("gallery"), ...kids));
+  }
+
+  function showGalleryLoading() {
+    $("gallery-body").replaceChildren(h("p", { class: "message", "data-g": "state" }, T.status.loading));
+  }
+
+  // A copy that failed after mounting stops its timer and listeners, so Try again
+  // doesn't leave two copies running.
+  function stopGallery() {
+    const old = gallery;
+    gallery = null;
+    if (!old || typeof old.destroy !== "function") return;
+    try { old.destroy(); } catch (err) { console.warn("Gallery failed to stop:", err); }
+  }
+
+  function showGalleryError() {
+    galleryState = "failed";
+    stopGallery();
+    galleryCard(
+      h("h3", { "data-g": "state" }, T.gallery.errorTitle),
+      h("p", null, T.gallery.errorBody),
+      h("button", { class: "btn", type: "button", onclick: startGallery }, T.gallery.tryAgain));
+  }
+
+  // Runs one call into the gallery module; whatever it throws stays contained.
+  function callGallery(fn) {
+    if (!gallery) return;
+    try { fn(gallery); } catch (err) {
+      console.warn("Gallery failed:", err);
+      showGalleryError();
     }
-    body.replaceChildren(h("div", { class: "gallery-actions" },
-      galleryAlbum && h("a", { class: "btn", href: galleryAlbum, target: "_blank", rel: "noopener" },
-        icon("gallery"), T.gallery.viewAlbum),
-      galleryUpload && h("a", { class: "btn btn-outline", href: galleryUpload, target: "_blank", rel: "noopener" },
-        T.gallery.upload)));
+  }
+
+  function startGallery() {
+    const run = ++galleryRun;
+    stopGallery();
+    galleryState = "loading";
+    showGalleryLoading();
+    loadGallery().then(() => {
+      if (run !== galleryRun) return;
+      const box = h("div", { class: "gallery-root" });
+      gallery = self.WeddingGallery.mount(box, {
+        cfg: CFG, text: T.gallery, h, icon, fill, storageGet, storageSet,
+        uploadsOpen: uploadsOpen(),
+        goContacts: () => { location.hash = "contacts"; },
+        locale: CFG.locale,
+      });
+      $("gallery-body").replaceChildren(box);
+      galleryState = "ready";
+      callGallery((g) => (currentRoute() === "gallery" ? g.show() : g.hide()));
+    }).catch((err) => {
+      if (run !== galleryRun) return;
+      console.warn("Gallery failed:", err);
+      showGalleryError();
+    });
+  }
+
+  function renderGallery() {
+    if (!CFG.gallery.endpoint) {
+      return galleryCard(
+        h("h3", null, T.gallery.comingSoonTitle),
+        h("p", null, T.gallery.comingSoonBody));
+    }
+    if (galleryState === "ready") callGallery((g) => g.update({ uploadsOpen: uploadsOpen() }));
+    else if (galleryState === "idle" && currentRoute() === "gallery" && isVisible("gallery")) startGallery();
   }
 
   /* ---------- Contacts ---------- */
@@ -630,6 +723,8 @@
       if (title) title.focus({ preventScroll: true });
     }
     if (route === "program" && model) scrollProgramToNow();
+    if (route === "gallery" && found && model) renderGallery();
+    callGallery((g) => (route === "gallery" && found ? g.show() : g.hide()));
     updateInstallHint();
   }
 

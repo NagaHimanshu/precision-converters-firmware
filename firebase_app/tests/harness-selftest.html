@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Harness self-test</title>
+</head>
+<body>
+<!-- Opened by tests/harness.test.js (not part of run.html's list): test files that fail to
+     load must count as failing tests. Its result is not sent to the dev server. -->
+<pre id="log"></pre>
+<script src="/tests/harness.js"></script>
+<script>test("selftest passes", function () { ok(true); });</script>
+<script src="/tests/fixtures/harness-syntax-error.js"></script>
+<script src="/tests/fixtures/harness-throws.js"></script>
+<script src="/tests/fixtures/harness-missing.js"></script>
+<script>
+  window.addEventListener("load", function () { runAll({ report: false }); });
+</script>
+</body>
+</html>

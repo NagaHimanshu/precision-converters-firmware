@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Screens</title>
+<style>
+  body { margin: 0; padding: 12px; background: #ddd; font: 14px sans-serif; }
+  .wall { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-start; }
+  figure { margin: 0; }
+  figcaption { margin-bottom: 4px; }
+  iframe { width: 390px; height: 800px; border: 1px solid #888; background: #fff; }
+</style>
+</head>
+<body>
+<!-- One phone per stand-in mode (mock=...; fresh=1 = nothing saved on the phone). Take a picture with:
+     python tools/screenshot.py /tests/screens.html out.png --height 2600 -->
+<div class="wall">
+  <figure><figcaption>Home</figcaption><iframe src="/"></iframe></figure>
+  <figure><figcaption>Gallery: mock=ok</figcaption><iframe src="/index.html?mock=ok#gallery"></iframe></figure>
+  <figure><figcaption>Viewer: mock=ok, second photo opened</figcaption><iframe data-open-viewer src="/index.html?mock=ok#gallery"></iframe></figure>
+  <figure><figcaption>mock=empty</figcaption><iframe src="/index.html?mock=empty#gallery"></iframe></figure>
+  <figure><figcaption>mock=down (HTTP 500), first visit</figcaption><iframe src="/index.html?mock=down&amp;fresh=1#gallery"></iframe></figure>
+  <figure><figcaption>mock=html (sign-in page), first visit</figcaption><iframe src="/index.html?mock=html&amp;fresh=1#gallery"></iframe></figure>
+  <figure><figcaption>mock=down, photos saved before</figcaption><iframe src="/index.html?mock=down#gallery"></iframe></figure>
+  <figure><figcaption>mock=badthumbs</figcaption><iframe src="/index.html?mock=badthumbs#gallery"></iframe></figure>
+  <figure><figcaption>mock=full</figcaption><iframe src="/index.html?mock=full#gallery"></iframe></figure>
+  <figure><figcaption>mock=paused</figcaption><iframe src="/index.html?mock=paused#gallery"></iframe></figure>
+  <figure><figcaption>sheet=paused (Sheet switch)</figcaption><iframe src="/index.html?sheet=paused#gallery"></iframe></figure>
+  <figure><figcaption>Ready to share (tests/panel-demo.html, 3 photos)</figcaption><iframe data-panel-demo src="/tests/panel-demo.html"></iframe></figure>
+  <figure><figcaption>Uploading: mock=slowupload, 3 photos + 1 unreadable</figcaption><iframe data-upload="4000" src="/index.html?mock=slowupload#gallery"></iframe></figure>
+  <figure><figcaption>Photos by me: 2 photos shared (mock=mine)</figcaption><iframe data-mine="2" src="/index.html?mock=mine#gallery"></iframe></figure>
+  <figure><figcaption>Photos by me: Delete tapped (mock=minedel)</figcaption><iframe data-mine="1" data-ask src="/index.html?mock=minedel#gallery"></iframe></figure>
+  <figure><figcaption>Photos by me: nothing shared yet (signed out)</figcaption><iframe data-mine="0" src="/index.html?mock=ok#gallery"></iframe></figure>
+  <figure><figcaption>Photos by me: signed in with Google (stand-in GIS)</figcaption><iframe data-signin="4000" src="/index.html?mock=ok#gallery"></iframe></figure>
+  <figure><figcaption>Photos by me: sign-in unavailable (gis=broken)</figcaption><iframe data-mine="0" src="/index.html?mock=ok&amp;gis=broken#gallery"></iframe></figure>
+  <figure><figcaption>Ready to share, signed in (panel-demo signedin=1)</figcaption><iframe data-panel-demo src="/tests/panel-demo.html?signedin=1"></iframe></figure>
+</div>
+<script>
+  // The panel demo: asks the page for 3 gradient photos and posts them back in.
+  addEventListener("message", function (e) {
+    if (!e.data || !e.data.panelDemoReady) return;
+    document.querySelectorAll("iframe[data-panel-demo]").forEach(function (f) {
+      if (f.contentWindow !== e.source) return;
+      f.contentWindow.demoPhotos().then(function (files) { f.contentWindow.postMessage({ files: files }, "*"); });
+    });
+  });
+
+  // Uploads 3 photos and one unreadable "photo" in frames marked data-upload="<ms>", like a guest
+  // would, <ms> after the Gallery is ready (so the picture catches them on their way).
+  function gradient(win, a, b, name) {
+    var c = document.createElement("canvas");
+    c.width = 600;
+    c.height = 450;
+    var g = c.getContext("2d");
+    var grad = g.createLinearGradient(0, 0, 600, 450);
+    grad.addColorStop(0, a);
+    grad.addColorStop(1, b);
+    g.fillStyle = grad;
+    g.fillRect(0, 0, 600, 450);
+    return new Promise(function (r) { c.toBlob(r, "image/jpeg", 0.8); }).then(function (blob) {
+      return new win.File([blob], name, { type: "image/jpeg" });
+    });
+  }
+  document.querySelectorAll("iframe[data-upload]").forEach(function (f) {
+    (function poll() {
+      var d = f.contentDocument;
+      var input = d && d.querySelector('#gallery-body input[type="file"]');
+      if (!input || !d.querySelector('#gallery-body [data-g="tile"]')) return setTimeout(poll, 100);
+      var w = f.contentWindow;
+      new Promise(function (r) { setTimeout(r, Number(f.dataset.upload) || 0); }).then(function () {
+        return Promise.all([gradient(w, "#f5b8a0", "#b4573f", "a.jpg"), gradient(w, "#b9d3b0", "#5e8a5a", "b.jpg"),
+          gradient(w, "#c9d6e3", "#6c7f93", "c.jpg")]);
+      }).then(function (files) {
+        var dt = new w.DataTransfer();
+        files.concat([new w.File(["not a photo"], "d.jpg", { type: "image/jpeg" })]).forEach(function (x) { dt.items.add(x); });
+        input.files = dt.files;
+        input.dispatchEvent(new Event("change"));
+        d.querySelector('#gallery-body [data-g="panel-upload"]').click();
+      });
+    })();
+  });
+
+  // Frames marked data-mine="<n>": share n photos, then open Photos by me (and with
+  // data-ask, tap Delete on the first one so Remove / Keep shows).
+  document.querySelectorAll("iframe[data-mine]").forEach(function (f) {
+    var n = Number(f.dataset.mine);
+    var q = function (sel) { return f.contentDocument && f.contentDocument.querySelector("#gallery-body " + sel); };
+    var until = function (fn) {
+      return new Promise(function (r) { (function poll() { var v = fn(); if (v) r(v); else setTimeout(poll, 100); })(); });
+    };
+    until(function () { return q('[data-g="tile"]') && q('input[type="file"]'); }).then(function (input) {
+      if (!n) return null;
+      var w = f.contentWindow;
+      var colours = [["#f3c6a5", "#c0704f"], ["#cfe0c3", "#6f9a63"]];
+      return Promise.all(colours.slice(0, n).map(function (c, i) { return gradient(w, c[0], c[1], "m" + i + ".jpg"); })).then(function (files) {
+        var dt = new w.DataTransfer();
+        files.forEach(function (x) { dt.items.add(x); });
+        input.files = dt.files;
+        input.dispatchEvent(new Event("change"));
+        return until(function () { return q('[data-g="panel-upload"]'); });
+      }).then(function (upload) {
+        upload.click();
+        return until(function () { return !q('[data-g="uploading-tile"]') && !q('[data-g="uploading"]'); });
+      });
+    }).then(function () {
+      q('[data-g="tab-mine"]').click();
+      if (f.hasAttribute("data-ask")) {
+        return until(function () { return q('[data-g="tile-delete"]'); }).then(function (del) { del.click(); });
+      }
+    });
+  });
+
+  // Frames marked data-signin="<ms>": open Photos by me and, <ms> later (after the other
+  // frames have shared their photos: they all use this page's phone), tap the stand-in
+  // Google button.
+  document.querySelectorAll("iframe[data-signin]").forEach(function (f) {
+    var q = function (sel) { return f.contentDocument && f.contentDocument.querySelector("#gallery-body " + sel); };
+    (function poll() {
+      if (!q('[data-g="tile"]')) return setTimeout(poll, 100);
+      q('[data-g="tab-mine"]').click();
+      setTimeout(function press() {
+        var b = q('[data-g="signin"] [data-fake-gis="button"]');
+        if (b) b.click();
+        else setTimeout(press, 100);
+      }, Number(f.dataset.signin) || 0);
+    })();
+  });
+
+  // Opens the viewer on the second photo (it has a name) in frames marked data-open-viewer.
+  document.querySelectorAll("iframe[data-open-viewer]").forEach(function (f) {
+    (function poll() {
+      var tile = f.contentDocument && f.contentDocument.querySelectorAll('[data-g="tile"] img')[1];
+      if (tile) tile.click();
+      else setTimeout(poll, 100);
+    })();
+  });
+</script>
+</body>
+</html>

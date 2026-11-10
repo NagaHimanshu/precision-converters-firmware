@@ -1,0 +1,786 @@
+/* Gallery styles. Colours come from the theme variables set by app.js
+   (plain white/black see-through layers are only used over photos and the dark viewer). */
+
+.gallery-root {
+  --gallery-add-width: 76%;
+  /* room so the last row isn't hidden behind the pinned Add photos button */
+  padding-bottom: calc(96px + env(safe-area-inset-bottom));
+  /* the grid keeps the guest's place itself when new photos appear above */
+  overflow-anchor: none;
+}
+
+/* Same rule as styles.css, so gallery parts that set their own display still hide. */
+.gallery-root [hidden],
+.g-panel-root [hidden] { display: none !important; }
+
+.g-subtitle {
+  margin: 0 0 14px;
+  text-align: center;
+  color: var(--ink-soft);
+}
+
+/* ---------- All photos | Photos by me ---------- */
+
+.g-tabs {
+  display: flex;
+  margin: 0 0 14px;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--blush);
+}
+
+.g-tab {
+  flex: 1;
+  min-height: 44px;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink-soft);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.g-tab[aria-pressed="true"] {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+/* ---------- Grid ---------- */
+
+.g-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+
+.g-tile {
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--blush);     /* shows while the picture loads, and as the soft placeholder */
+}
+
+.g-tile::before {                /* square tile on every browser */
+  content: "";
+  display: block;
+  padding-top: 100%;
+}
+
+.g-open {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.g-open img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.g-open .icon,
+.g-v-stage .icon { display: none; }
+
+.g-tile.is-broken img { display: none; }
+
+.g-tile.is-broken .g-open .icon {
+  display: block;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 44px;
+  height: 44px;
+  margin: -22px 0 0 -22px;
+  color: var(--gold);
+  opacity: 0.7;
+}
+
+/* The pill is small; the button around it is a full-size tap target. */
+.g-heart {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  min-width: 48px;
+  min-height: 48px;
+  padding: 6px;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+
+.g-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 11px;
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.5;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.g-heart.is-on .g-pill { color: var(--joiner); }
+
+/* Delete on a tile of Photos by me: small pill, full-size tap target (top right). */
+.g-del {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  min-width: 48px;
+  min-height: 48px;
+  padding: 6px;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+
+.g-del .g-pill { color: var(--joiner); }
+.g-del:disabled { cursor: default; }
+.g-tile.is-deleting { opacity: 0.55; }   /* being deleted: dimmed, nothing spins */
+
+/* ---------- Calm cards and notes ---------- */
+
+/* Calm error card (reuses the .coming-soon arch from styles.css). */
+.coming-soon .btn { margin-top: 20px; }
+
+.g-notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px 14px;
+  margin: 0 0 14px;
+  padding: 10px 14px;
+  border: 1px solid var(--blush);
+  border-radius: 14px;
+  background: var(--surface);
+  color: var(--ink-soft);
+  text-align: center;
+}
+
+.g-more { text-align: center; }
+.g-more .btn { margin-top: 18px; }
+
+.g-sentinel { height: 1px; }
+
+/* ---------- Google sign-in (bottom of Photos by me; in the panel when asked for) ---------- */
+
+.g-signin-card {
+  margin: 22px 0 0;
+  padding: 16px;
+  border: 1.5px dashed var(--gold);
+  border-radius: 14px;
+  background: var(--surface);
+  color: var(--ink-soft);
+  text-align: center;
+}
+
+.g-signin-title { margin: 0; color: var(--ink); font-weight: 700; }
+.g-signin-note { margin: 10px 0 0; }
+.g-signout { margin-top: 12px; }
+
+/* Google draws its own button here (not restyled); this only gives it room. */
+.g-signin {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  margin-top: 12px;
+}
+
+.g-gbutton {
+  display: flex;
+  justify-content: center;
+  min-height: 44px;
+  max-width: 100%;
+}
+
+.g-signin-status { margin: 8px 0 0; color: var(--ink-soft); }
+
+/* ---------- Pinned Add photos ---------- */
+
+.g-addbar {
+  position: fixed;
+  left: 50%;
+  bottom: 0;
+  z-index: 6;
+  width: 100%;
+  max-width: 520px;              /* same as the page column (#app) */
+  transform: translateX(-50%);
+  padding: 14px 16px calc(16px + env(safe-area-inset-bottom));
+  background: linear-gradient(to top, var(--background) 65%, transparent);
+  text-align: center;
+  pointer-events: none;          /* the faded band doesn't block taps on the grid */
+}
+
+.g-add {
+  width: var(--gallery-add-width);
+  min-height: 56px;
+  padding: 12px 16px;
+  border: 0;
+  border-radius: 16px;
+  background: var(--joiner);
+  color: var(--surface);
+  font: inherit;
+  font-weight: 700;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+/* ---------- Full-screen viewer ---------- */
+
+html.g-viewer-open,
+html.g-viewer-open body { overflow: hidden; }
+
+.g-viewer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  background: var(--ink);
+  background: color-mix(in srgb, var(--ink) 30%, #000);
+  color: var(--surface);
+}
+
+.g-v-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: calc(12px + env(safe-area-inset-top)) 16px 8px 20px;
+}
+
+.g-v-round {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.16);
+  color: inherit;
+  font: inherit;
+  font-size: 32px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.g-v-close { font-size: 36px; }
+
+.g-v-stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  touch-action: pinch-zoom;      /* sideways swipes come to us; zooming still works */
+}
+
+.g-v-stage.is-zoomed { touch-action: pan-x pan-y pinch-zoom; }   /* zoomed in: one finger moves around */
+
+.g-v-img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.g-v-stage.is-broken .g-v-img { visibility: hidden; }
+
+.g-v-stage.is-broken .icon {
+  display: block;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 56px;
+  height: 56px;
+  margin: -28px 0 0 -28px;
+  color: var(--gold);
+  opacity: 0.7;
+}
+
+.g-v-prev,
+.g-v-next {
+  position: absolute;
+  top: 50%;
+  margin-top: -26px;
+}
+
+.g-v-prev { left: 8px; }
+.g-v-next { right: 8px; }
+
+.g-v-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px calc(20px + env(safe-area-inset-bottom)) 20px;
+}
+
+.g-v-by {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.g-v-name { display: block; font-weight: 700; }
+.g-v-time { display: block; opacity: 0.75; }
+
+.g-v-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 10px;
+}
+
+.g-v-heart,
+.g-v-delete {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 52px;
+  padding: 8px 18px;
+  border-radius: 999px;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.g-v-heart {
+  border: 0;
+  background: rgba(255, 255, 255, 0.16);
+  font-size: 20px;
+}
+
+.g-v-heart .g-glyph { font-size: 24px; color: var(--rose); }
+
+.g-v-delete {
+  border: 1.5px solid var(--rose);
+  background: transparent;
+}
+
+.g-v-delete:disabled { opacity: 0.55; cursor: default; }
+
+.g-v-status {
+  margin: 0 16px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.16);
+  text-align: center;
+}
+
+/* ---------- Uploads in the grid ---------- */
+
+/* Stays in sight just under the screen's sticky header while uploads run. */
+.g-upline-box {
+  position: sticky;
+  top: calc(69px + env(safe-area-inset-top));   /* .inner-header in styles.css: 10 + 48 + 10 + 1 border */
+  z-index: 4;
+}
+
+.g-upline {
+  margin: 0 0 14px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: var(--ink);
+  color: var(--surface);
+}
+
+/* A delete that didn't work: a calm line in the same kept-in-sight spot. */
+.g-status {
+  margin: 0 0 14px;
+  padding: 10px 14px;
+  border: 1.5px solid var(--rose);
+  border-radius: 14px;
+  background: var(--surface);
+  color: var(--ink);
+  text-align: center;
+}
+
+.g-upline p { margin: 0; }
+.g-upline .g-keep-open { opacity: 0.85; }
+.g-upline p + p { margin-top: 4px; }
+
+/* Paused / album full: a soft note in the pinned spot of Add photos. */
+.g-upnote {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 56px;
+  padding: 8px 12px 8px 16px;
+  border: 1.5px dashed var(--gold);
+  border-radius: 16px;
+  background: var(--surface);
+  color: var(--ink-soft);
+  line-height: 1.35;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  pointer-events: auto;
+}
+
+.g-upnote p { margin: 0; }
+.g-upnote .btn { flex: none; padding-left: 14px; padding-right: 14px; }
+.g-upnote[data-g="full"] { text-align: left; }
+
+.g-up img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.g-up-busy {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.g-ring {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--rose);                          /* if conic gradients aren't supported */
+  background: conic-gradient(var(--joiner) calc(var(--p, 0) * 1%), rgba(255, 255, 255, 0.75) 0);
+  transition: background 0.3s;
+}
+
+.g-ring::after {
+  content: "";
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.g-up-failed {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  padding: 10px;
+  border: 0;
+  background: rgba(255, 255, 255, 0.85);
+  color: var(--joiner);
+  font: inherit;
+  font-weight: 700;
+  text-align: center;
+  cursor: pointer;
+}
+
+/* ---------- Ready to share panel ---------- */
+
+.g-file {                        /* the photo picker's input: present, but out of sight */
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+html.g-panel-open,
+html.g-panel-open body { overflow: hidden; }
+
+.g-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 40;
+}
+
+.g-dim {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background: rgba(0, 0, 0, 0.45);
+  background: color-mix(in srgb, var(--ink) 60%, transparent);
+}
+
+.g-sheet {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;                      /* lifted above the on-screen keyboard by view-panel.js */
+  max-width: 520px;
+  max-height: 92vh;
+  margin: 0 auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 10px 18px calc(20px + env(safe-area-inset-bottom));
+  border-radius: 24px 24px 0 0;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.g-p-grab {
+  width: 44px;
+  height: 5px;
+  margin: 0 auto 6px;
+  border-radius: 9px;
+  background: var(--blush);
+}
+
+.g-p-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.g-p-head h2 { margin: 0; font-size: 1.3rem; }
+
+.g-p-close {
+  width: 48px;
+  height: 48px;
+  margin-right: -8px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: 32px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.g-p-thumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin: 8px 0 18px;
+  padding-top: 8px;               /* room for the × badges */
+}
+
+.g-p-thumb,
+.g-p-more {
+  position: relative;
+  width: 76px;
+  height: 76px;
+  border-radius: 12px;
+}
+
+.g-p-thumb { background: var(--blush); }
+
+.g-p-thumb img {
+  display: none;
+  width: 100%;
+  height: 100%;
+  border-radius: 12px;
+  object-fit: cover;
+}
+
+.g-p-thumb.has-preview img { display: block; }
+
+.g-p-thumb .icon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 32px;
+  height: 32px;
+  margin: -16px 0 0 -16px;
+  color: var(--gold);
+  opacity: 0.6;
+}
+
+.g-p-thumb.has-preview .icon { display: none; }
+
+/* The badge is small; the button around it is a full-size tap target. */
+.g-p-remove {
+  position: absolute;
+  top: -14px;
+  right: -14px;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.g-p-remove span {
+  display: block;
+  width: 28px;
+  height: 28px;
+  margin: auto;
+  border: 2px solid var(--surface);
+  border-radius: 50%;
+  background: var(--ink);
+  color: var(--surface);
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 24px;
+}
+
+.g-p-more {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 2px dashed var(--gold);
+  background: transparent;
+  color: var(--gold-text);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.g-p-plus { font-size: 26px; line-height: 1; }
+
+.g-p-note {
+  margin: -4px 0 16px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--background);
+  color: var(--ink-soft);
+}
+
+.g-p-name { margin-bottom: 18px; }
+
+.g-p-name label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 700;
+}
+
+.g-p-optional { font-weight: 400; color: var(--ink-soft); }
+
+.g-p-input {
+  display: block;
+  width: 100%;
+  min-height: 52px;
+  padding: 10px 14px;
+  border: 2px solid var(--blush);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 18px;                /* 16px or more: phones don't zoom in on focus */
+}
+
+.g-p-input:focus { border-color: var(--gold); }
+
+.g-p-hint { margin: 6px 0 0; color: var(--ink-soft); }
+
+.g-p-upload {
+  display: block;
+  width: 100%;
+  min-height: 56px;
+  padding: 12px 16px;
+  border: 0;
+  border-radius: 16px;
+  background: var(--joiner);
+  color: var(--surface);
+  font: inherit;
+  font-size: 1.1rem;
+  font-weight: 700;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+}
+
+.g-p-upload:disabled { opacity: 0.5; cursor: default; }
+
+.g-p-google {
+  display: block;
+  min-height: 44px;
+  margin: 8px auto 0;
+  padding: 6px 12px;
+  border: 0;
+  background: transparent;
+  color: var(--ink-soft);
+  font: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--gold);
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.g-p-signin { margin-top: 8px; text-align: center; }
+
+/* ---------- Remove / Keep question ---------- */
+
+.g-confirm {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.g-c-box {
+  position: relative;
+  width: 100%;
+  max-width: 360px;
+  padding: 24px 20px 20px;
+  border-radius: 20px;
+  background: var(--surface);
+  color: var(--ink);
+  text-align: center;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+}
+
+.g-c-text { margin: 0 0 20px; font-size: 1.15rem; font-weight: 700; }
+
+.g-c-actions { display: flex; gap: 12px; }
+.g-c-actions .btn { flex: 1; }
+
+.g-c-remove {
+  border-color: var(--joiner);
+  background: var(--joiner);
+  color: var(--surface);
+}

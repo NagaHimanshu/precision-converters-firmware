@@ -107,11 +107,20 @@ In the **Settings** tab add a row (column `key`, column `value`):
 | show_venues | yes |
 | show_gallery | no |
 | show_contacts | yes |
+| gallery_uploads | yes |
 
 - Change `no` → `yes` to reveal a section (e.g. Stay one week before the wedding).
   Guests see it the next time they open the site — no redeploy.
 - If a row is missing or blank, the default from `site-config.js` (`features`)
   is used. Right now Stay and Gallery default to hidden; the rest are shown.
+- `show_gallery`: the Gallery needs its backend set up first
+  ([GALLERY_SETUP.md](GALLERY_SETUP.md)); until then it only says "Coming soon".
+- `gallery_uploads`: `no` (or `off` / `hide`) pauses adding photos: guests can
+  still look and heart, and see "Photo sharing is paused for now." where the Add
+  photos button was. `yes` or blank = open. It reaches guests' phones within about
+  1–5 minutes; no redeploy.
+- The photos themselves are not in this Sheet: they are in a Drive folder, listed
+  in a separate private spreadsheet that the Gallery setup creates.
 - Hidden only means "not shown in the app". The sheet is readable by anyone
   with its link, so don't rely on this for anything truly secret.
 

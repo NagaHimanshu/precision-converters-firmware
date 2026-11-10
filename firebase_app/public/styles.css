@@ -508,12 +508,6 @@ a { color: inherit; }
 
 .coming-soon p { margin: 0; color: var(--ink-soft); }
 
-.gallery-actions {
-  display: grid;
-  gap: 12px;
-  margin-top: 24px;
-}
-
 /* ---------- Floating bars ---------- */
 
 .status-bar {

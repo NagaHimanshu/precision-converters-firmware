@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#fff">
+<title>Panel demo (test only)</title>
+<link rel="stylesheet" href="/styles.css">
+<link rel="stylesheet" href="/gallery/gallery.css">
+<style>
+  /* A stand-in Gallery behind the panel (this page is not the product). */
+  .demo-head { padding: 18px 16px 6px; font-family: var(--font-script), serif; font-size: 2.2rem; color: var(--gold-text); }
+  .demo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 0 16px; }
+  .demo-grid div { aspect-ratio: 1; border-radius: 12px; background: var(--blush); }
+</style>
+</head>
+<body>
+<!-- Mounts WeddingGallery.viewPanel on its own and opens it with the files that
+     tests/screens.html posts in ({ files: File[] }). Opened directly, it makes 3 itself. -->
+<div class="demo-head">Gallery</div>
+<div class="demo-grid"><div></div><div></div><div></div><div></div><div></div><div></div></div>
+<script src="/site-config.js"></script>
+<script src="/gallery/errors.js"></script>
+<script src="/gallery/identity.js"></script>
+<script src="/gallery/image.js"></script>
+<script src="/gallery/view-panel.js"></script>
+<script>
+(function () {
+  "use strict";
+  var C = self.SITE_CONFIG;
+  var root = document.documentElement.style;
+  Object.keys(C.theme.colors).forEach(function (k) {
+    root.setProperty("--" + k.replace(/[A-Z]/g, function (c) { return "-" + c.toLowerCase(); }), C.theme.colors[k]);
+  });
+  root.setProperty("--font-script", '"' + C.theme.fonts.script + '"');
+  root.setProperty("--font-body", '"' + C.theme.fonts.body + '"');
+
+  function fill(t, v) { return String(t).replace(/\{(\w+)\}/g, function (m, k) { return v[k] != null ? v[k] : m; }); }
+  function h(tag, props) {
+    var node = document.createElement(tag);
+    Object.keys(props || {}).forEach(function (k) {
+      var v = props[k];
+      if (v == null || v === false) return;
+      if (k === "class") node.className = v;
+      else if (k.indexOf("on") === 0) node.addEventListener(k.slice(2), v);
+      else node.setAttribute(k, v);
+    });
+    [].slice.call(arguments, 2).flat().forEach(function (kid) {
+      if (kid == null || kid === false || kid === "") return;
+      node.append(kid instanceof Node ? kid : String(kid));
+    });
+    return node;
+  }
+  function icon() {
+    var t = document.createElement("template");
+    t.innerHTML = '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">' +
+      '<path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.8"/></svg>';
+    return t.content.firstElementChild;
+  }
+
+  var saved = { "gallery-name": "Ravi uncle" };
+  // signedin=1: as if signed in with Google (no name box, no Google link).
+  if (new URLSearchParams(location.search).get("signedin") === "1") saved["gallery-account"] = JSON.stringify({ name: "Ravi Kumar" });
+  var identity = WeddingGallery.identity.create({
+    storageGet: function (k) { return saved[k] || null; },
+    storageSet: function (k, v) { saved[k] = v; },
+  });
+  var ctx = { cfg: C, text: C.text.gallery, h: h, icon: icon, fill: fill, locale: C.locale };
+  // Sign-in is not wired up here: the Google link shows, tapping it does nothing.
+  var panel = WeddingGallery.viewPanel.create({ ctx: ctx, identity: identity, onUpload: function () {},
+    signIn: { mountButton: function () {} } });
+  document.body.append(panel.el);
+
+  // Gradient photos like the mockup's stand-ins.
+  function photo(a, b, name) {
+    var c = document.createElement("canvas");
+    c.width = 600;
+    c.height = 450;
+    var g = c.getContext("2d");
+    var grad = g.createLinearGradient(0, 0, 600, 450);
+    grad.addColorStop(0, a);
+    grad.addColorStop(1, b);
+    g.fillStyle = grad;
+    g.fillRect(0, 0, 600, 450);
+    return new Promise(function (r) { c.toBlob(r, "image/jpeg", 0.8); }).then(function (blob) {
+      return new File([blob], name, { type: "image/jpeg" });
+    });
+  }
+  self.demoPhotos = function () {
+    return Promise.all([photo("#f5b8a0", "#b4573f", "a.jpg"), photo("#b9d3b0", "#5e8a5a", "b.jpg"),
+      photo("#c9d6e3", "#6c7f93", "c.jpg")]);
+  };
+
+  self.addEventListener("message", function (e) {
+    if (e.data && e.data.files) panel.open(e.data.files);
+  });
+  if (self.parent !== self) self.parent.postMessage({ panelDemoReady: true }, "*");
+  else self.demoPhotos().then(function (files) { panel.open(files); });
+})();
+</script>
+</body>
+</html>

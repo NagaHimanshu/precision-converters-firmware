@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Gallery mockup v3</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700&family=Pinyon+Script&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --background:#FFF7F2; --surface:#FFFFFF; --blush:#F6DCDC; --rose:#E8A0A8;
+    --joiner:#B5485D; --gold:#C9A227; --gold-text:#8C6A12; --ink:#3E2B30; --ink-soft:#6E5A5F;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; padding:24px; background:#e9e4e1; font-family:"Nunito Sans",system-ui,sans-serif; color:var(--ink); }
+  h1 { margin:0 0 4px; font-size:22px; }
+  .lead { margin:0 0 24px; color:#555; max-width:1100px; }
+  .row { display:flex; flex-wrap:wrap; gap:28px; margin-bottom:36px; }
+  .item { width:330px; }
+  .item h2 { font-size:15px; margin:0 0 8px; }
+  .note { font-size:13.5px; color:#444; line-height:1.45; margin-top:10px; }
+  .note b { color:var(--joiner); }
+
+  /* phone frame */
+  .phone { position:relative; width:330px; height:680px; background:var(--background); border-radius:34px;
+    border:10px solid #2b2326; overflow:hidden; font-size:16px; line-height:1.45; }
+  .scroll { position:absolute; inset:0; overflow:hidden; padding-bottom:90px; }
+  .head { display:flex; align-items:center; gap:8px; padding:18px 14px 6px; }
+  .back { width:38px; height:38px; border-radius:50%; display:grid; place-items:center; font-size:22px; color:var(--gold-text); }
+  .head h3 { margin:0; font-family:"Pinyon Script",serif; font-weight:400; font-size:34px; color:var(--gold-text); line-height:1; }
+  .sub { margin:0 16px 10px; color:var(--ink-soft); font-size:14.5px; }
+
+  .seg { display:flex; margin:0 16px 12px; background:var(--blush); border-radius:999px; padding:4px; }
+  .seg span { flex:1; text-align:center; padding:8px 0; border-radius:999px; font-weight:700; font-size:15px; color:var(--ink-soft); }
+  .seg span.on { background:var(--surface); color:var(--ink); box-shadow:0 1px 3px rgba(0,0,0,.12); }
+
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; padding:0 10px; }
+  .tile { position:relative; aspect-ratio:1; border-radius:10px; overflow:hidden; }
+  .heart { position:absolute; right:6px; bottom:6px; background:rgba(255,255,255,.92); border-radius:999px;
+    padding:3px 9px; font-size:13.5px; font-weight:700; display:flex; gap:4px; align-items:center; }
+  .heart.liked { color:var(--joiner); }
+  .p1{background:linear-gradient(135deg,#f3c7a6,#c97b63)} .p2{background:linear-gradient(160deg,#a9c4d6,#5f7f99)}
+  .p3{background:linear-gradient(135deg,#f0d98c,#c39a3a)} .p4{background:linear-gradient(200deg,#e6b3c2,#a2566e)}
+  .p5{background:linear-gradient(135deg,#b9d3b0,#5e8a5a)} .p6{background:linear-gradient(160deg,#d8c3e8,#7f5f9a)}
+  .p7{background:linear-gradient(135deg,#f5b8a0,#b4573f)} .p8{background:linear-gradient(200deg,#c9d6e3,#6c7f93)}
+
+  .sticky { position:absolute; left:0; right:0; bottom:0; padding:12px 16px 18px;
+    background:linear-gradient(to top, var(--background) 70%, rgba(255,247,242,0)); }
+  .btn { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; padding:15px; border-radius:16px;
+    background:var(--joiner); color:#fff; font-weight:700; font-size:18px; border:0; box-shadow:0 4px 12px rgba(181,72,93,.3); }
+  .btn.outline { background:var(--surface); color:var(--ink); border:2px solid var(--gold); box-shadow:none; font-size:16px; padding:12px; }
+  .btn.small { font-size:16px; padding:12px; }
+  .sticky .btn { width:76%; margin:0 auto; }
+
+  /* sheet */
+  .dim { position:absolute; inset:0; background:rgba(40,25,30,.45); }
+  .sheet { position:absolute; left:0; right:0; bottom:0; background:var(--surface); border-radius:24px 24px 0 0; padding:18px 18px 22px; }
+  .grab { width:44px; height:5px; border-radius:9px; background:#ddd; margin:0 auto 14px; }
+  .sheet h4 { margin:0 0 12px; font-size:19px; }
+  .thumbs { display:flex; gap:8px; margin-bottom:16px; }
+  .thumbs > div { position:relative; width:62px; height:62px; border-radius:10px; }
+  .rm b { position:absolute; top:-6px; right:-6px; width:22px; height:22px; border-radius:50%; background:var(--ink); color:#fff;
+    display:grid; place-items:center; font-size:14px; }
+  .more { border:2px dashed var(--gold); color:var(--gold-text); display:flex; flex-direction:column; align-items:center;
+    justify-content:center; font-size:20px; line-height:1; }
+  .more small { font-size:12px; font-weight:700; margin-top:3px; }
+  label { display:block; font-weight:700; font-size:15px; margin-bottom:6px; }
+  label i { font-weight:400; color:var(--ink-soft); font-style:normal; }
+  .input { border:2px solid var(--blush); border-radius:12px; padding:12px; font-size:17px; color:var(--ink); margin-bottom:6px; }
+  .hint { font-size:13.5px; color:var(--ink-soft); margin:0 0 16px; }
+  .link { text-align:center; margin-top:12px; color:var(--ink-soft); font-size:15px; }
+  .link u { color:var(--gold-text); }
+
+  /* progress */
+  .prog { position:absolute; inset:0; background:rgba(255,255,255,.55); display:grid; place-items:center; }
+  .ring { width:44px; height:44px; border-radius:50%; background:conic-gradient(var(--joiner) var(--p), rgba(255,255,255,.7) 0);
+    display:grid; place-items:center; }
+  .ring::after { content:""; width:32px; height:32px; border-radius:50%; background:rgba(255,255,255,.9); }
+  .fail { position:absolute; inset:0; background:rgba(255,255,255,.8); display:grid; place-items:center; text-align:center;
+    font-size:14px; font-weight:700; color:var(--joiner); padding:8px; }
+  .toast { margin:0 16px 10px; background:var(--ink); color:#fff; border-radius:12px; padding:10px 14px; font-size:14.5px; }
+
+  /* viewer */
+  .viewer { position:absolute; inset:0; background:#16110f; color:#fff; }
+  .vtop { display:flex; justify-content:space-between; align-items:center; padding:16px; font-size:15px; }
+  .x { width:40px; height:40px; border-radius:50%; background:rgba(255,255,255,.15); display:grid; place-items:center; font-size:22px; }
+  .vphoto { margin:30px 0 0; height:360px; }
+  .vbar { position:absolute; left:0; right:0; bottom:0; padding:16px 18px 24px; display:flex; align-items:center; justify-content:space-between; }
+  .by { font-size:16px; } .by small { display:block; color:#bbb; font-size:13px; }
+  .bigheart { display:flex; align-items:center; gap:8px; background:rgba(255,255,255,.14); border-radius:999px; padding:10px 18px; font-size:18px; font-weight:700; }
+  .bigheart span { color:#ff6b88; font-size:22px; }
+  .arrows { position:absolute; top:250px; left:0; right:0; display:flex; justify-content:space-between; padding:0 6px; }
+  .arrows span { width:36px; height:36px; border-radius:50%; background:rgba(255,255,255,.15); display:grid; place-items:center; }
+
+  /* my photos */
+  .del { position:absolute; right:6px; top:6px; background:rgba(255,255,255,.95); border-radius:999px; padding:4px 10px;
+    font-size:13.5px; font-weight:700; color:var(--joiner); }
+  .card { margin:14px 16px 0; padding:14px; border:1.5px dashed var(--gold); border-radius:14px; background:var(--surface); font-size:14.5px; color:var(--ink-soft); }
+  .gbtn { margin-top:10px; display:flex; align-items:center; justify-content:center; gap:8px; border:1.5px solid #dadce0; border-radius:999px;
+    padding:9px; font-weight:700; color:#3c4043; background:#fff; font-size:15px; }
+  .g { font-weight:800; color:#4285F4; }
+
+  /* error / empty */
+  .arch-card { margin:24px auto 0; width:260px; padding:40px 22px 28px; text-align:center; border:2px solid var(--gold);
+    border-radius:999px 999px 24px 24px; background:var(--surface); }
+  .arch-card .ic { font-size:40px; }
+  .arch-card h5 { margin:8px 0 6px; font-family:"Pinyon Script",serif; font-weight:400; font-size:30px; color:var(--gold-text); line-height:1.1; }
+  .arch-card p { margin:0 0 16px; color:var(--ink-soft); font-size:15px; }
+</style>
+</head>
+<body>
+<h1>Gallery — mockup v3 (blush &amp; gold theme)</h1>
+<p class="lead">Six moments a guest goes through. Grey photos are stand-ins for real ones. Notes under each phone explain <b>why</b> things are where they are, with older guests in mind.</p>
+
+<div class="row">
+  <!-- 1. Gallery main -->
+  <div class="item">
+    <h2>1 · Opening the Gallery</h2>
+    <div class="phone"><div class="scroll">
+      <div class="head"><div class="back">‹</div><h3>Gallery</h3></div>
+      <p class="sub">Candid moments shared by our guests · 126 photos</p>
+      <div class="seg"><span class="on">All photos</span><span>Photos by me</span></div>
+      <div class="grid">
+        <div class="tile p1"><div class="heart liked">♥ 24</div></div>
+        <div class="tile p2"><div class="heart">♡ 8</div></div>
+        <div class="tile p3"><div class="heart">♡ 15</div></div>
+        <div class="tile p4"><div class="heart liked">♥ 31</div></div>
+        <div class="tile p5"><div class="heart">♡ 3</div></div>
+        <div class="tile p6"><div class="heart">♡ 12</div></div>
+      </div>
+    </div>
+    <div class="sticky"><div class="btn">📷 Add photos</div></div></div>
+    <p class="note"><b>Add photos is pinned at the bottom</b>, always visible while scrolling, right where the thumb rests. It's the only filled-colour button on the screen, so the eye goes there first. Words + icon, not just "+".<br>
+    <b>Newest first</b>, so people see what just happened. Tap ♡ on a tile to heart it, no need to open the photo.<br>
+    <b>No sign-in button here</b> — it would be a second thing competing for attention (see screen 5).</p>
+  </div>
+
+  <!-- 2. Name step -->
+  <div class="item">
+    <h2>2 · After picking photos</h2>
+    <div class="phone"><div class="scroll">
+      <div class="head"><div class="back">‹</div><h3>Gallery</h3></div>
+      <div class="grid">
+        <div class="tile p1"></div><div class="tile p2"></div><div class="tile p3"></div><div class="tile p4"></div>
+      </div>
+    </div>
+    <div class="dim"></div>
+    <div class="sheet">
+      <div class="grab"></div>
+      <h4>Ready to share</h4>
+      <div class="thumbs">
+        <div class="p7 rm"><b>×</b></div><div class="p5 rm"><b>×</b></div><div class="p8 rm"><b>×</b></div>
+        <div class="more">＋<small>More</small></div>
+      </div>
+      <label>Your name <i>(optional)</i></label>
+      <div class="input">Ravi uncle</div>
+      <p class="hint">Shown as "By Ravi uncle". We'll remember it on this phone.</p>
+      <div class="btn">Upload</div>
+      <p class="link">or <u>use my Google name</u></p>
+    </div></div>
+    <p class="note">Tapping Add photos opens the <b>phone's normal photo picker</b>, where they tick as many photos as they like in one go (up to 20). This panel then shows what they picked: <b>×</b> removes one, <b>＋ More</b> reopens the picker. Name box is filled in automatically next time; leaving it blank is fine.<br>
+    The Google option is <b>small text, not a button</b> — available, but not a decision anyone has to make.</p>
+  </div>
+
+  <!-- 3. Uploading -->
+  <div class="item">
+    <h2>3 · Uploading</h2>
+    <div class="phone"><div class="scroll">
+      <div class="head"><div class="back">‹</div><h3>Gallery</h3></div>
+      <div class="toast">Uploading 2 of 3… you can keep browsing</div>
+      <div class="seg"><span class="on">All photos</span><span>Photos by me</span></div>
+      <div class="grid">
+        <div class="tile p7"><div class="heart">♡ 0</div></div>
+        <div class="tile p5"><div class="prog"><div class="ring" style="--p:65%"></div></div></div>
+        <div class="tile p8"><div class="fail">Couldn't upload<br>Tap to try again</div></div>
+        <div class="tile p1"><div class="heart liked">♥ 24</div></div>
+        <div class="tile p2"><div class="heart">♡ 8</div></div>
+        <div class="tile p3"><div class="heart">♡ 15</div></div>
+      </div>
+    </div>
+    <div class="sticky"><div class="btn">📷 Add photos</div></div></div>
+    <p class="note">Their photos <b>appear immediately at the top</b> with a progress ring — instant reassurance that it worked.<br>
+    One failure only affects that tile: <b>plain words, tap to retry</b>. Others continue. No error codes, ever.</p>
+  </div>
+</div>
+
+<div class="row">
+  <!-- 4. Viewer -->
+  <div class="item">
+    <h2>4 · Tapping a photo</h2>
+    <div class="phone"><div class="viewer">
+      <div class="vtop"><span>12 of 126</span><div class="x">×</div></div>
+      <div class="vphoto p4"></div>
+      <div class="arrows"><span>‹</span><span>›</span></div>
+      <div class="vbar">
+        <div class="by">By Lakshmi aunty<small>Today, 8:42 pm</small></div>
+        <div class="bigheart"><span>♥</span> 31</div>
+      </div>
+    </div></div>
+    <p class="note">Full photo, uncropped, dark background. <b>Swipe or tap the arrows</b> to move; tap × or swipe down to close.<br>
+    A <b>big heart button</b> with the count. Hearts = one per phone; tapping again removes it.<br>
+    If it's <b>your own</b> photo, a 🗑 Delete button appears next to the heart.</p>
+  </div>
+
+  <!-- 5. Photos by me -->
+  <div class="item">
+    <h2>5 · "Photos by me" tab</h2>
+    <div class="phone"><div class="scroll">
+      <div class="head"><div class="back">‹</div><h3>Gallery</h3></div>
+      <p class="sub">Photos you've shared from this phone</p>
+      <div class="seg"><span>All photos</span><span class="on">Photos by me</span></div>
+      <div class="grid">
+        <div class="tile p7"><div class="del">🗑 Delete</div><div class="heart">♡ 2</div></div>
+        <div class="tile p5"><div class="del">🗑 Delete</div><div class="heart">♡ 0</div></div>
+      </div>
+      <div class="card">Shared photos from another phone?
+        <div class="gbtn"><span class="g">G</span> Sign in with Google</div>
+      </div>
+    </div>
+    <div class="sticky"><div class="btn">📷 Add photos</div></div></div>
+    <p class="note">Delete lives <b>only here and in the viewer</b> — never on the main grid, so no one deletes by accident. Tapping it asks "Remove this photo for everyone?" with <b>Remove</b> / <b>Keep</b>.<br>
+    <b>Google sign-in lives here</b>, where it actually solves a problem. Once signed in, the card becomes "Signed in as Ravi · Sign out".</p>
+  </div>
+
+  <!-- 6. Error -->
+  <div class="item">
+    <h2>6 · When something breaks</h2>
+    <div class="phone"><div class="scroll">
+      <div class="head"><div class="back">‹</div><h3>Gallery</h3></div>
+      <div class="arch-card">
+        <div class="ic">🌸</div>
+        <h5>Just a moment</h5>
+        <p>The photos are taking a little break. Please try again in a minute.</p>
+        <div class="btn small">Try again</div>
+      </div>
+    </div></div>
+    <p class="note">Same arch style as the rest of the site, so it feels <b>designed, not broken</b>. The back button and every other section keep working.<br>
+    Similar calm screens for <b>"no photos yet"</b> ("Be the first to share a moment" + Add photos) and <b>no internet</b>.</p>
+  </div>
+</div>
+</body>
+</html>

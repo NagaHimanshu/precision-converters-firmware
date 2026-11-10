@@ -2,7 +2,7 @@
    Strategy: try the network first (so edits show up), fall back to the saved
    copy when offline or the network is too slow. Sheet data is cached by app.js. */
 
-const CACHE = "site-v2";
+const CACHE = "site-v3";
 const SHELL = [
   "./",
   "index.html",
@@ -30,8 +30,11 @@ self.addEventListener("activate", (event) => {
 function networkFirst(request) {
   return new Promise((resolve) => {
     let settled = false;
+    // Only a page load may get the saved index.html instead; anything else gets its own
+    // saved copy or nothing (a slow one then keeps waiting for the network).
+    const page = request.mode === "navigate";
     const fromCache = () =>
-      caches.match(request, { ignoreSearch: request.mode === "navigate" }).then((hit) => hit || caches.match("index.html"));
+      caches.match(request, { ignoreSearch: page }).then((hit) => hit || (page ? caches.match("index.html") : undefined));
 
     const timer = setTimeout(() => {
       fromCache().then((hit) => {

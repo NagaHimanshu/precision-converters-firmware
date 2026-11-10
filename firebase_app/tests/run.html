@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Tests</title>
+<link rel="stylesheet" href="/gallery/gallery.css">
+</head>
+<body>
+<pre id="log"></pre>
+<script src="/site-config.js"></script>
+<script src="/tests/harness.js"></script>
+<!-- Later tasks add their module and *.test.js files here. -->
+<script src="/tests/harness.test.js"></script>
+<script src="/tests/loader.test.js"></script>
+<script src="/gallery/errors.js"></script>
+<script src="/gallery/api.js"></script>
+<script src="/tests/api.test.js"></script>
+<script src="/gallery/identity.js"></script>
+<script src="/gallery/store.js"></script>
+<script src="/gallery/view-grid.js"></script>
+<script src="/gallery/view-viewer.js"></script>
+<script src="/gallery/image.js"></script>
+<script src="/gallery/uploader.js"></script>
+<script src="/gallery/view-panel.js"></script>
+<script src="/tests/identity.test.js"></script>
+<script src="/tests/store.test.js"></script>
+<script src="/tests/views.test.js"></script>
+<script src="/tests/image.test.js"></script>
+<script src="/tests/uploader.test.js"></script>
+<script src="/tests/panel.test.js"></script>
+<!-- Apps Script backend: Config.gs and Logic.gs are plain scripts (no Google services). -->
+<script src="/apps-script/Config.gs"></script>
+<script src="/apps-script/Logic.gs"></script>
+<script src="/tests/logic.test.js"></script>
+<script>
+  window.addEventListener("load", function () { runAll(); });
+</script>
+</body>
+</html>
