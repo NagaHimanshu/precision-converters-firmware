@@ -2,7 +2,7 @@
    Strategy: try the network first (so edits show up), fall back to the saved
    copy when offline or the network is too slow. Sheet data is cached by app.js. */
 
-const CACHE = "site-v6";
+const CACHE = "site-v7";
 const SHELL = [
   "./",
   "index.html",
@@ -65,6 +65,6 @@ self.addEventListener("fetch", (event) => {
   if (request.method !== "GET") return;
   const url = new URL(request.url);
   const sameOrigin = url.origin === self.location.origin;
-  if (!sameOrigin && !FONT_HOSTS.includes(url.hostname)) return; // e.g. Google Sheet: handled by app.js
+  if (!sameOrigin && !FONT_HOSTS.includes(url.hostname)) return; // e.g. the Apps Script data request: handled by app.js
   event.respondWith(networkFirst(request));
 });

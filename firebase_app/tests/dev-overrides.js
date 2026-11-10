@@ -16,7 +16,8 @@
   }
   // sheet=paused: a copy of the sheet with gallery_uploads = no; sheet=hidden: show_gallery = no.
   var sheet = q.get("sheet");
-  C.sheet.urlTemplate = sheet === "paused" || sheet === "hidden" ? "/sheet/" + sheet + "/{tab}.csv" : "/sheet/{tab}.csv";
+  // The Sheet request goes to the stand-in (tools/mock_sheet.py), which reads tests/sheet/.
+  C.sheet.endpoint = sheet === "paused" || sheet === "hidden" ? "/sheet-api?sheet=" + sheet : "/sheet-api";
   if (C.gallery) {
     // mock=none: no backend configured (Gallery shows "coming soon").
     C.gallery.endpoint = mock === "none" ? "" : "/mock-api?mode=" + encodeURIComponent(mock);

@@ -10,9 +10,10 @@ Text values can use placeholders, filled from the Sheet's Settings tab:
 ## sheet
 | Key | What it does |
 |---|---|
-| `id` | Google Sheet ID (required). |
-| `urlTemplate` | How a tab is fetched. Keep as is unless you switch to "Publish to web" CSV (`https://docs.google.com/spreadsheets/d/e/<pub-id>/pub?output=csv&sheet={tab}`). |
-| `tabs.*` | Tab names in the sheet. |
+| `endpoint` | The Apps Script web app address (set once from `BACKEND_URL` at the top of the file; the Gallery uses the same one). The site asks it for the Sheet's tabs; the script reads the Sheet. **The Sheet's ID is not in this file**: it is in the script's `Config.gs` (`WEDDING_SHEET_ID`), so the Sheet can stay private. |
+| `requestTimeoutMs` | Give up on the Sheet request after this long (ms). |
+| `refreshAfterMs` | A phone that returns to the site after being away this long (default 30 s) asks for the Sheet's details again; opening the site always asks. With `SITE_CACHE_SECONDS` below, a Sheet edit reaches an open phone within about the sum. Each returning phone makes one request to Apps Script, so don't go much lower. |
+| `tabs.*` | Tab names in the sheet. They must be the same names as `SITE_TABS` in the script's `Config.gs`, which lists the only tabs the site may read. |
 | `columns.*` | Header text for each column. Change the right-hand side if your sheet uses different headers. |
 | `settingKeys.*` | Names used in the Settings tab's `key` column. |
 | `showKeys.*` | Settings-tab keys that show/hide a section (`show_program`, `show_stay`, `show_venues`, `show_gallery`, `show_contacts`). `settingKeys.galleryUploads` (`gallery_uploads`) pauses guest uploads. |
@@ -200,8 +201,10 @@ Deploy → Manage deployments → Edit → **New version**
 | Key | Default | What it does |
 |---|---|---|
 | `OWNER_EMAIL` | the wedding account (filled in) | Who gets the "storage nearly full" email. `setup` also only reuses a folder or spreadsheet that belongs to this account. Never shown to guests. |
-| `WEDDING_SHEET_ID` | the wedding Sheet's ID | The same Sheet the site reads; only its Settings tab is read (for the pause switch). |
+| `WEDDING_SHEET_ID` | the wedding Sheet's ID | The wedding Sheet. It can be private: this script runs as its owner and is the only thing that reads it for the site (the tabs in `SITE_TABS`, and the Settings tab for the pause switch). |
 | `SETTINGS_TAB` | `Settings` | Tab in the wedding Sheet with the key/value settings. |
+| `SITE_TABS` | `Settings`, `Program`, `Accommodation`, `Locations`, `Contacts` | The only tabs of the wedding Sheet the site can ask for; any other tab (private notes, a guest list) is never given out. Must match `sheet.tabs` in `site-config.js`. |
+| `SITE_CACHE_SECONDS` | `10` | How long a tab's rows are remembered between requests: the Sheet is read at most once per tab per this many seconds, however many guests ask. An edit in the Sheet (laptop or Sheets app) reaches the site within about this long plus `sheet.refreshAfterMs`. Any value from 1 to 21600 works (the "every 1, 5, 10, 15 or 30 minutes" limit is only for timer triggers); lower = fresher edits but more Sheet reads. |
 | `UPLOADS_KEY` | `gallery_uploads` | Settings key of the pause switch: `no` (or `n`, `false`, `0`, `off`, `hide`) pauses uploads. Missing or blank = open. |
 | `GOOGLE_CLIENT_ID` | blank | Google sign-in client ID; must be the same as `gallery.googleClientId` in `site-config.js`. Blank = every sign-in is refused. |
 | `TOKENINFO_URL` | Google's token-check address | Where a guest's sign-in is checked with Google. Leave it. |

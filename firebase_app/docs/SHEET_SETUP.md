@@ -1,8 +1,13 @@
 # Google Sheet setup (the wedding data)
 
-The site reads all wedding details from one Google Sheet. Anyone you add as an
-editor can update it from the Google Sheets app on their phone. Guests see the
-change the next time they open (or reopen) the site — no redeploy needed.
+The site shows all wedding details from one Google Sheet. The Sheet stays
+**private**: the site never reads it directly, it asks the Apps Script web app
+([GALLERY_SETUP.md](GALLERY_SETUP.md)), which reads the Sheet as you. Anyone you add
+as an editor can update it from the Google Sheets app on their phone. Guests see the
+change within about 40 seconds on a phone that has the site open, and at once on a
+phone that opens it — no redeploy needed (the script remembers each tab for
+`SITE_CACHE_SECONDS`, 10 seconds; a phone looks again when it returns to the site after
+`sheet.refreshAfterMs`, 30 seconds).
 
 ## 1. Create the sheet
 
@@ -18,17 +23,26 @@ Select everything in each tab (click the top-left corner box) →
 **Format → Number → Plain text**.
 
 Why: otherwise Google converts values on its own — phone numbers lose the
-`+`, `07:30` turns into a decimal, and a column that mixes numbers and text
-(rooms like `101` and `G-12`) can come through with blanks.
+`+` and `07:30` turns into a decimal. The site shows each cell exactly as the
+Sheet shows it.
 
 ## 3. Share it
 
-1. **Share** button → General access → **Anyone with the link** → **Viewer**.
-   (The site needs this to read the data. It does not let anyone edit.)
-2. Add your helpers by email as **Editor**.
+1. **Share** button → General access → **Restricted** (the default). The Sheet is
+   private: nobody can open it by its address, only the people you add.
+2. Add your helpers by their Google account email as **Editor**. (The Apps Script runs
+   as the account that owns the Sheet, so it needs nothing more. If you run the script
+   from another account, add that account as a **Viewer** too.)
 3. Copy the sheet ID from the address bar:
    `https://docs.google.com/spreadsheets/d/`**`1AbC...xyz`**`/edit`
-   and paste it into `public/site-config.js` → `sheet.id`. Redeploy once.
+   and paste it into `apps-script/Config.gs` → `WEDDING_SHEET_ID`, then publish a new
+   version of the script ([GALLERY_SETUP.md](GALLERY_SETUP.md#after-changing-any-gs-file-publish-a-new-version)).
+   **Do not** put the ID in `public/site-config.js`: every phone downloads that file.
+4. In the Apps Script editor choose **checkSheetAccess** → **Run**. The log should show
+   the number of rows in each of the five tabs. A tab it can't find is named there (the
+   names must match `SITE_TABS` in `Config.gs` and `sheet.tabs` in `site-config.js`).
+   Tabs you add yourself (private notes...) are never given to the site unless you add
+   them to `SITE_TABS`.
 
 ## 4. Protect the header row (recommended)
 

@@ -6,7 +6,7 @@
   /site-config.js   the real file + tests/dev-overrides.js appended
   /tests/*          tests/
   /apps-script/*    apps-script/ (.gs served as JavaScript)
-  /sheet/{tab}.csv  tests/sheet/{tab}.csv
+  POST /sheet-api   the Apps Script `sheet` request, answered from tests/sheet/{tab}.csv (tools/mock_sheet.py)
   POST /mock-api, GET /mock-api/img/{id}   tools/mock_gallery.py
   GET /gallery/gallery.js  page switches: break=load (404), break=mount (mount throws),
                     break=once&k=KEY (404 the first time for that KEY), break=show (the
@@ -34,9 +34,9 @@ ROOT = os.path.dirname(HERE)
 PUBLIC = os.path.join(ROOT, "public")
 TESTS = os.path.join(ROOT, "tests")
 APPS_SCRIPT = os.path.join(ROOT, "apps-script")
-SHEET = os.path.join(TESTS, "sheet")
 
 import mock_gallery  # noqa: E402
+import mock_sheet  # noqa: E402
 
 # Logs posted by the test page; tools/run_tests.py reads them.
 RESULTS = queue.Queue()
@@ -127,8 +127,6 @@ class Handler(BaseHTTPRequestHandler):
         for prefix, base in (("/tests/", TESTS), ("/apps-script/", APPS_SCRIPT)):
             if path.startswith(prefix):
                 return self.send_file(safe_join(base, path[len(prefix):]))
-        if path.startswith("/sheet/") and path.endswith(".csv"):
-            return self.send_file(safe_join(self.sheet_dir(), path[len("/sheet/"):]))
         rel = path.lstrip("/") or "index.html"
         if rel == "gallery/gallery.js":
             # Test switches from the page query (see the top of this file); product code has no hooks.
@@ -161,6 +159,8 @@ class Handler(BaseHTTPRequestHandler):
         body = self.rfile.read(n) if n else b""
         if path == "/mock-api":
             return self.mock(lambda: mock_gallery.handle_api(self.query(), body, self.headers))
+        if path == "/sheet-api":
+            return self.mock(lambda: mock_sheet.handle_sheet(self.query(), body))
         if path == "/tests/result":
             RESULTS.put(body.decode("utf-8", "replace"))
             return self.send(204, {}, b"")
@@ -180,10 +180,6 @@ class Handler(BaseHTTPRequestHandler):
                 'width:100%%;height:100%%;display:block}</style><iframe src="%s"></iframe>'
                 '<img src="/dev/hold?ms=%d" alt="" style="position:absolute;width:1px;height:1px">' % (page, ms))
         return self.send(200, {"Content-Type": "text/html; charset=utf-8"}, body.encode())
-
-    def sheet_dir(self):
-        # Later tasks pick another folder from the page query (e.g. sheet=paused).
-        return SHEET
 
     def site_config(self):
         with open(os.path.join(PUBLIC, "site-config.js"), "rb") as f:

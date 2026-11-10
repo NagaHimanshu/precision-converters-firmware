@@ -17,12 +17,16 @@
       "FOLDER_NAME", "DATA_SHEET_NAME", "DRIVE_FOLDER_ID", "DATA_SHEET_ID", "STORAGE_WARN_PERCENT",
       "STORAGE_STOP_PERCENT", "MAX_PHOTO_BYTES", "NAME_MAX_LENGTH", "PAGE_SIZE_MAX", "RATE_LIMIT_PER_HOUR",
       "SETTINGS_CACHE_SECONDS", "STORAGE_CACHE_SECONDS", "LIST_CACHE_SECONDS", "SYNC_MINUTES", "LOCK_WAIT_MS",
-      "CACHE_CHUNK_BYTES", "TIME_ZONE", "WARN_MAIL_SUBJECT", "WARN_MAIL_BODY", "SYNC_MAX_SECONDS", "TOKENINFO_URL"];
+      "CACHE_CHUNK_BYTES", "TIME_ZONE", "WARN_MAIL_SUBJECT", "WARN_MAIL_BODY", "SYNC_MAX_SECONDS", "TOKENINFO_URL",
+      "SITE_TABS", "SITE_CACHE_SECONDS"];
     eq(CONFIG.TOKENINFO_URL, "https://oauth2.googleapis.com/tokeninfo");
     for (const k of keys) ok(k in CONFIG, "CONFIG." + k);
     eq(CONFIG.OWNER_EMAIL, "jahnavirishika6@gmail.com");
     eq(CONFIG.UPLOADS_KEY, "gallery_uploads");
     eq(CONFIG.TIME_ZONE, "Asia/Kolkata");
+    eq(CONFIG.SITE_TABS, ["Settings", "Program", "Accommodation", "Locations", "Contacts"], "the tabs the site may read");
+    ok(CONFIG.SITE_CACHE_SECONDS >= 1 && CONFIG.SITE_CACHE_SECONDS <= 600, "Sheet edits reach the site within minutes");
+    eq(CONFIG.SITE_TABS, Object.values(self.SITE_CONFIG.sheet.tabs), "same tab names as sheet.tabs in site-config.js");
     ok(CONFIG.CACHE_CHUNK_BYTES <= 100 * 1024, "chunk fits CacheService's value limit");
   });
 
@@ -48,6 +52,9 @@
     eq(parseRequest(JSON.stringify({ action: "list", device: "abc" })), null, "short device");
     eq(parseRequest(JSON.stringify({ action: "list", device: DEV_A.toUpperCase() })), null, "upper-case device");
     eq(parseRequest(undefined), null);
+    eq(parseRequest(JSON.stringify({ action: "sheet" })).action, "sheet", "the Sheet request needs no device code");
+    eq(parseRequest(JSON.stringify({ action: "list" })), null, "other actions still do");
+    eq(parseRequest(JSON.stringify({ action: "sheet", device: 5 })).action, "sheet", "and ignores a bad one");
   });
 
   test("pageOf", function () {
@@ -295,6 +302,27 @@
     }
   });
 
+  test("siteTabsWanted", function () {
+    const allowed = ["Settings", "Program", "Accommodation"];
+    eq(siteTabsWanted(undefined, allowed), allowed, "nothing asked = every allowed tab");
+    eq(siteTabsWanted(null, allowed), allowed);
+    eq(siteTabsWanted(["Program", "Settings"], allowed), ["Settings", "Program"], "allowed order, no repeats");
+    eq(siteTabsWanted(["Program", "Program"], allowed), ["Program"]);
+    eq(siteTabsWanted(["Settings", "Private notes"], allowed), ["Settings"], "tabs not on the list are dropped");
+    eq(siteTabsWanted(["Private notes"], allowed), null, "nothing allowed = refused");
+    eq(siteTabsWanted([], allowed), null);
+    eq(siteTabsWanted("Settings", allowed), null, "not a list");
+    eq(siteTabsWanted({ length: 1, 0: "Settings" }, allowed), null);
+    eq(siteTabsWanted(["settings"], allowed), null, "names are exact");
+    eq(siteTabsWanted(["__proto__", "toString"], allowed), null);
+  });
+
+  test("siteRows", function () {
+    eq(siteRows([["a", 5, null, undefined, true, 1.5], []]), [["a", "5", "", "", "true", "1.5"], []]);
+    eq(siteRows([]), []);
+    eq(siteRows(undefined), []);
+  });
+
   test("triggerMinutes", function () {
     eq(triggerMinutes(15), { minutes: 15, valid: true });
     eq(triggerMinutes(1), { minutes: 1, valid: true });
@@ -343,6 +371,7 @@
     const text = await codeSource();
     const make = new Function(...GOOGLE, text +
       "\n;return { doPost: doPost, doGet: doGet, setup: setup, syncDeletions: syncDeletions, hash: hash," +
+      " checkSheetAccess: checkSheetAccess," +
       " inside: { readRows: readRows, rowsGen: rowsGen, cachePutJson: cachePutJson } };");
     return make(...GOOGLE.map((n) => env[n]));
   }
@@ -355,7 +384,12 @@
       getName: () => name,
       getDataRange() {
         const self = this;
-        return { getValues() { self.reads++; return rows.length ? rows.map((r) => r.slice()) : [[""]]; } };
+        const grid = () => (rows.length ? rows.map((r) => r.slice()) : [[""]]);
+        return {
+          getValues() { self.reads++; return grid(); },
+          // Like Sheets: the text as shown (numbers and dates already formatted).
+          getDisplayValues() { self.reads++; return grid().map((r) => r.map((x) => (x === null || x === undefined ? "" : String(x)))); },
+        };
       },
       getLastRow: () => rows.length,
       getMaxRows: () => Math.max(1000, rows.length),
@@ -373,8 +407,8 @@
     };
   }
 
-  function fakeSpreadsheet(id, name, tabs) {
-    const sheets = Object.entries(tabs || {}).map(([n, rows]) => fakeSheet(n, rows));
+  function fakeSpreadsheet(id, name, tabs, more) {
+    const sheets = Object.entries(Object.assign({}, tabs, more)).map(([n, rows]) => fakeSheet(n, rows));
     return {
       id, name, sheets,
       getId: () => id,
@@ -419,7 +453,7 @@
     if (!o.noSettings) {
       spreadsheets[CONFIG.WEDDING_SHEET_ID] = fakeSpreadsheet(CONFIG.WEDDING_SHEET_ID, "Wedding", {
         [CONFIG.SETTINGS_TAB]: [["key", "value"]].concat(o.settings || []),
-      });
+      }, o.wedding);
     }
 
     // Drive's owner of an item: a user, or null (e.g. a shared drive).
@@ -662,7 +696,7 @@
       "storageState", "uploadsOpenFrom", "isJpeg", "checkTokenInfo", "countRecent", "fail",
       "rowObjects", "rowValues", "cellText", "asciiJson", "toCacheParts", "fromCacheParts", "cachePartCount",
       "triggerMinutes", "driveErrorCode", "photoFileName", "fillText", "driveNotFound", "syncChanges", "folderIdFrom",
-      "genStamp", "headInGen"];
+      "genStamp", "headInGen", "siteTabsWanted", "siteRows"];
     const before = logicFns.map((n) => self[n]);
     ok(before.every((f) => typeof f === "function"), "Logic.gs functions are global");
     let scriptError = null;
@@ -728,6 +762,88 @@
     const r = await post(env, { action: "list", device: DEV_A, limit: 30 });
     eq(r.body, { ok: false, code: "unavailable" });
     ok(env.state.errors.length > 0, "console.error called");
+  });
+
+  /* ---------- the wedding Sheet's tabs (action "sheet") ---------- */
+
+  const WEDDING = {
+    Program: [["date", "time", "event"], ["2027-01-01", "10:00", "Muhurtham"]],
+    Accommodation: [["sno", "name", "room"], [1, "Ravi uncle", 101], [2, "Latha aunty", ""]],
+    "Private notes": [["secret"], ["do not share"]],
+  };
+
+  function wedding(env) {
+    return env.state.spreadsheets[CONFIG.WEDDING_SHEET_ID];
+  }
+
+  function weddingTab(env, name) {
+    return wedding(env).sheets.find((x) => x.getName() === name);
+  }
+
+  test("code.gs sheet answers the site's tabs as text rows", async function () {
+    const env = fakeGoogle({ settings: [["bride", "Rishika"]], wedding: WEDDING });
+    const r = await post(env, { action: "sheet" });   // no device code
+    eq(r.mime, "JSON-MIME");
+    eq(r.body.ok, true);
+    eq(Object.keys(r.body.tabs), CONFIG.SITE_TABS, "the listed tabs, in order");
+    eq(r.body.tabs.Settings, [["key", "value"], ["bride", "Rishika"]]);
+    eq(r.body.tabs.Accommodation, [["sno", "name", "room"], ["1", "Ravi uncle", "101"], ["2", "Latha aunty", ""]], "every cell is text");
+    eq(r.body.tabs.Locations, null, "a tab the Sheet doesn't have comes back null");
+    eq(r.body.tabs.Contacts, null);
+  });
+
+  test("code.gs sheet only gives the tabs on the list", async function () {
+    const env = fakeGoogle({ wedding: WEDDING });
+    const some = await post(env, { action: "sheet", tabs: ["Program", "Private notes"] });
+    eq(Object.keys(some.body.tabs), ["Program"], "an unlisted tab is not read or returned");
+    eq((await post(env, { action: "sheet", tabs: ["Private notes"] })).body, { ok: false, code: "invalid" });
+    eq((await post(env, { action: "sheet", tabs: "Program" })).body, { ok: false, code: "invalid" });
+    eq((await post(env, { action: "sheet", tabs: [] })).body, { ok: false, code: "invalid" });
+    ok(!JSON.stringify(some.body).includes("do not share"), "nothing from the other tab");
+    eq(weddingTab(env, "Private notes").reads, 0, "never even read");
+  });
+
+  test("code.gs sheet works without the gallery's setup", async function () {
+    const env = fakeGoogle({ noSecret: true, props: { DATA_SHEET_ID: "" }, wedding: WEDDING });
+    const r = await post(env, { action: "sheet", tabs: ["Program"] });
+    eq(r.body.ok, true);
+    eq(r.body.tabs.Program[1], ["2027-01-01", "10:00", "Muhurtham"]);
+    eq(env.state.errors, [], "no setup() complaint");
+  });
+
+  test("code.gs sheet remembers a tab for a short while", async function () {
+    const env = fakeGoogle({ wedding: WEDDING });
+    const a = await post(env, { action: "sheet", tabs: ["Program"] });
+    const b = await post(env, { action: "sheet", tabs: ["Program", "Accommodation"] });
+    eq(weddingTab(env, "Program").reads, 1, "read once, then from the cache");
+    eq(b.body.tabs.Program, a.body.tabs.Program);
+    wedding(env).tab("Program")[1][2] = "Reception";   // an edit in the Sheet
+    eq((await post(env, { action: "sheet", tabs: ["Program"] })).body.tabs.Program[1][2], "Muhurtham", "until the cache expires");
+    Array.from(env.state.cache.keys()).forEach((k) => env.state.cache.delete(k));   // the cache's time is up
+    eq((await post(env, { action: "sheet", tabs: ["Program"] })).body.tabs.Program[1][2], "Reception", "then the edit shows");
+  });
+
+  test("code.gs sheet: a broken tab is null, all broken is unavailable", async function () {
+    const env = fakeGoogle({ wedding: WEDDING });
+    weddingTab(env, "Program").getDataRange = () => { throw new Error("boom"); };
+    const r = await post(env, { action: "sheet", tabs: ["Program", "Accommodation"] });
+    eq(r.body.ok, true);
+    eq(r.body.tabs.Program, null);
+    ok(Array.isArray(r.body.tabs.Accommodation), "the other tab still answers");
+    ok(env.state.logs.some((l) => /Program/.test(l)), "the problem is logged");
+    const down = fakeGoogle({ sheetsDown: true });
+    const d = await post(down, { action: "sheet" });
+    eq(d.body, { ok: false, code: "unavailable" });
+    eq(d.mime, "JSON-MIME");
+  });
+
+  test("code.gs checkSheetAccess logs every tab", async function () {
+    const env = fakeGoogle({ wedding: WEDDING });
+    (await codeWith(env)).checkSheetAccess();
+    const log = env.state.logs.join("\n");
+    ok(/Program: 1 data rows/.test(log) && /Accommodation: 2 data rows/.test(log), "counts rows");
+    ok(/Locations: TAB NOT FOUND/.test(log), "says which tab is missing");
+    ok(!/Private notes/.test(log), "only the listed tabs");
   });
 
   test("code.gs hashes are sheet-safe", async function () {

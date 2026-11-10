@@ -10,7 +10,7 @@ Gallery (guests share, heart and save photos; optional Google sign-in), Contacts
 |---|---|
 | Program, rooms, venues, contacts, names, date | the **Google Sheet** — no redeploy ([docs/SHEET_SETUP.md](docs/SHEET_SETUP.md)) |
 | Show/hide a section, pause photo uploads | the Sheet's **Settings** tab (`show_…`, `gallery_uploads`) — no redeploy |
-| Text, colours, photo, links, features, sheet ID | **`public/site-config.js`** — then redeploy ([docs/CONFIG.md](docs/CONFIG.md)) |
+| Text, colours, photo, links, features, the Apps Script address | **`public/site-config.js`** — then redeploy ([docs/CONFIG.md](docs/CONFIG.md)) |
 | Gallery backend (Drive folder, storage warning, sign-in) | **`apps-script/Config.gs`** in the Apps Script editor ([docs/GALLERY_SETUP.md](docs/GALLERY_SETUP.md)) |
 | Going live / beta / QR code | [docs/DEPLOY.md](docs/DEPLOY.md) |
 

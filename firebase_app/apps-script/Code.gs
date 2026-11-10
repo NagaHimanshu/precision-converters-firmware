@@ -1,7 +1,7 @@
 /* Gallery backend: the web app (Google Apps Script).
 
-   What is here: doPost (every request from the site), doGet (a health check), the
-   request handlers, small adapters around Google's services (Sheets, Drive, cache, lock, mail,
+   What is here: doPost (every request from the site: the wedding Sheet's tabs and the
+   Gallery), doGet (a health check), the request handlers, small adapters around Google's services (Sheets, Drive, cache, lock, mail,
    script properties), and setup(), which the owner runs once from the editor.
    The rules themselves live in Logic.gs (no Google services, tested in the browser);
    the settings live in Config.gs (private).
@@ -25,6 +25,8 @@ const PROP_LAST_WARN = "lastWarnDate";   // day the "storage nearly full" email 
 const ROWS_KEY = "rows:";                // + tab: "rows:{tab}:n" (head), "rows:{tab}:{i}" (parts)
 const GEN_KEY = "gen:";                  // + tab: changes on every write to that tab (see readRows)
 const WARM_TABS = ["Photos", "Hearts", "Devices"];   // the lists every request reads
+const SITE_KEY = "site:";                // + tab: the wedding Sheet tab as remembered rows (see readSiteTab)
+const SITE_GEN = "site";                 // their one fixed "generation": they simply expire (SITE_CACHE_SECONDS)
 const UPLOADS_OPEN_KEY = "settings:uploadsOpen";
 const STORAGE_KEY = "storage:numbers";   // JSON { used, limit } in bytes
 // What Drive's "storage full" error is remembered as: 100% used.
@@ -52,7 +54,7 @@ const ACCOUNT_PREFIX = "g:";
 const HTTP_OK = 200;
 
 // Things looked up once per request (Apps Script starts fresh for every request).
-const EXEC = { props: null, spreadsheet: null, dirty: {} };
+const EXEC = { props: null, spreadsheet: null, wedding: null, dirty: {} };
 
 /* ---------- web app entry points ---------- */
 
@@ -76,6 +78,8 @@ function reply(obj) {
 function route(body) {
   const req = parseRequest(body);
   if (!req) return fail("invalid");
+  // The site's wedding data needs neither a phone code nor the gallery's setup().
+  if (req.action === "sheet") return handleSheet(req);
   const handler = handlerFor(req.action);
   if (!handler) return fail("invalid");
   const missing = missingSetup();
@@ -99,6 +103,40 @@ function handlerFor(action) {
 }
 
 /* ---------- handlers ---------- */
+
+// { tabs? } -> { ok, tabs: { name: rows } }: the wedding Sheet's tabs (only those on
+// CONFIG.SITE_TABS) as rows of text, header row first. A tab that can't be read is null,
+// so the site keeps its saved copy of that one. Nothing is written, nothing is private to a phone.
+function handleSheet(req) {
+  const wanted = siteTabsWanted(req.tabs, CONFIG.SITE_TABS);
+  if (!wanted) return fail("invalid");
+  const tabs = {};
+  let any = false;
+  wanted.forEach((name) => {
+    tabs[name] = readSiteTab(name);
+    if (tabs[name]) any = true;
+  });
+  return any ? { ok: true, tabs: tabs } : fail("unavailable");
+}
+
+// One tab of the wedding Sheet as rows of text, from the cache when it has them; null if
+// the tab can't be read. Rows are remembered for SITE_CACHE_SECONDS.
+function readSiteTab(name) {
+  const hit = cacheGetJson(SITE_KEY + name, SITE_GEN);
+  if (hit) return hit;
+  try {
+    if (!EXEC.wedding) EXEC.wedding = SpreadsheetApp.openById(CONFIG.WEDDING_SHEET_ID);
+    const sheet = EXEC.wedding.getSheetByName(name);
+    if (!sheet) throw new Error("tab " + name + " not found");
+    // Display values: the text exactly as the Sheet shows it (dates, numbers, phone numbers).
+    const rows = siteRows(sheet.getDataRange().getDisplayValues());
+    cachePutJson(SITE_KEY + name, rows, CONFIG.SITE_CACHE_SECONDS, SITE_GEN);
+    return rows;
+  } catch (err) {
+    console.warn("Wedding Sheet tab " + name + " unreadable:", String(err));
+    return null;
+  }
+}
 
 // { cursor?, limit, mine? } -> one page of photos, newest first, plus the album's state.
 function handleList(req, viewer) {
@@ -835,4 +873,15 @@ function ownedByOwner(item) {
 
 function newSecret() {
   return Utilities.getUuid().replace(/-/g, "") + Utilities.getUuid().replace(/-/g, "");
+}
+
+// Run once in the Apps Script editor (Run > checkSheetAccess) after the wedding Sheet is made
+// private: shows in the log whether this script can still read every tab the site needs.
+function checkSheetAccess() {
+  const ss = SpreadsheetApp.openById(CONFIG.WEDDING_SHEET_ID);
+  CONFIG.SITE_TABS.forEach((name) => {
+    const sheet = ss.getSheetByName(name);
+    Logger.log(name + ": " + (sheet ? Math.max(0, sheet.getLastRow() - 1) + " data rows" : "TAB NOT FOUND (check the name)"));
+  });
+  Logger.log("Done. If every tab shows rows, the site can read the Sheet through this script.");
 }

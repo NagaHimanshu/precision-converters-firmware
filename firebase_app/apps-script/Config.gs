@@ -12,10 +12,20 @@
 var CONFIG = {
   // Who gets the "storage nearly full" email. Never shown to guests.
   OWNER_EMAIL: "jahnavirishika6@gmail.com",
-  // The public wedding Sheet (the same one the site reads); only its Settings tab is read.
+  // The wedding Sheet. It can stay private: this script runs as its owner and is the only
+  // thing that reads it. The site asks this script for the tabs listed in SITE_TABS.
   WEDDING_SHEET_ID: "1MEXBdLLJq7gbCIpEdubQQ-DJOkBXsEsPMxGFsVrcEUQ",
   // Tab in the wedding Sheet that holds key/value settings.
   SETTINGS_TAB: "Settings",
+  // The only tabs of the wedding Sheet the site may ask for (names exactly as in the Sheet).
+  // Any other tab (private notes, a guest list...) is never given out. These must be the
+  // same names as sheet.tabs in site-config.js.
+  SITE_TABS: ["Settings", "Program", "Accommodation", "Locations", "Contacts"],
+  // Seconds a tab's rows are remembered between requests: an edit in the Sheet (from a
+  // laptop or the Sheets app) reaches the site within about this long (plus the site's own
+  // sheet.refreshAfterMs). At most one Sheet read per tab per this many seconds, however
+  // many guests ask. Allowed: 1 to 21600; 10 keeps the script well inside Google's limits.
+  SITE_CACHE_SECONDS: 10,
   // Settings key for the pause-uploads switch: "no" (or n/false/0/off/hide) pauses uploads.
   UPLOADS_KEY: "gallery_uploads",
   // Google sign-in OAuth client ID (the same value as gallery.googleClientId on the site).

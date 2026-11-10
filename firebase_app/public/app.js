@@ -6,9 +6,8 @@
   const CFG = self.SITE_CONFIG;
   const T = CFG.text;
   const COLS = CFG.sheet.columns;
-  const CACHE_KEY = "site-data:" + CFG.sheet.id;
+  const CACHE_KEY = "site-data";
   const HINT_KEY = "install-hint-dismissed";
-  const REFRESH_AFTER_MS = 5 * 60 * 1000;
   const YES = /^(y|yes|true|1|on|show)$/i;
   const NO = /^(n|no|false|0|off|hide)$/i;
 
@@ -115,48 +114,34 @@
 
   /* ---------- Data loading ---------- */
 
-  function parseCSV(text) {
-    const rows = [];
-    let row = [];
-    let field = "";
-    let quoted = false;
-    for (let i = 0; i < text.length; i++) {
-      const c = text[i];
-      if (quoted) {
-        if (c === '"') {
-          if (text[i + 1] === '"') { field += '"'; i++; } else quoted = false;
-        } else field += c;
-      } else if (c === '"') quoted = true;
-      else if (c === ",") { row.push(field); field = ""; }
-      else if (c === "\n" || c === "\r") {
-        if (c === "\r" && text[i + 1] === "\n") i++;
-        row.push(field); rows.push(row); row = []; field = "";
-      } else field += c;
-    }
-    if (field !== "" || row.length) { row.push(field); rows.push(row); }
-    return rows;
-  }
-
+  // One request to the Apps Script web app, which reads the (private) Sheet and answers with
+  // every tab as rows of text, header row first. A tab it couldn't read comes back empty and
+  // keeps its last saved copy (see refresh); only a failure of the whole request throws.
   async function fetchRaw() {
     const tabs = CFG.sheet.tabs;
     const raw = {};
-    if (!CFG.sheet.id) throw new Error("sheet.id is empty in site-config.js");
-    // Each tab loads on its own, so one broken tab doesn't take down the others.
-    const results = await Promise.allSettled(Object.entries(tabs).map(async ([key, tab]) => {
-      const url = fill(CFG.sheet.urlTemplate, {
-        id: encodeURIComponent(CFG.sheet.id),
-        tab: encodeURIComponent(tab),
+    if (!CFG.sheet.endpoint) throw new Error("sheet.endpoint is empty in site-config.js");
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), CFG.sheet.requestTimeoutMs);
+    let body;
+    try {
+      const res = await fetch(CFG.sheet.endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({ action: "sheet", tabs: Object.values(tabs) }),
+        signal: controller.signal,
       });
-      const res = await fetch(url, { cache: "no-store" });
-      if (!res.ok) throw new Error(tab + " " + res.status);
-      const text = await res.text();
-      // A sign-in page instead of CSV means the sheet is not shared publicly.
-      if (/^\s*</.test(text)) throw new Error(tab + " not shared");
-      raw[key] = parseCSV(text);
-    }));
-    const failed = results.filter((r) => r.status === "rejected");
-    failed.forEach((r) => console.warn("Tab failed:", r.reason));
-    if (failed.length === results.length) throw failed[0].reason;
+      if (!res.ok) throw new Error("Sheet request " + res.status);
+      body = JSON.parse(await res.text());
+    } finally {
+      clearTimeout(timer);
+    }
+    if (!body || body.ok !== true || !body.tabs) throw new Error("Sheet request refused: " + (body && body.code));
+    for (const [key, tab] of Object.entries(tabs)) {
+      if (Array.isArray(body.tabs[tab])) raw[key] = body.tabs[tab];
+      else console.warn("Tab failed:", tab);
+    }
+    if (!Object.keys(raw).length) throw new Error("No tab came back");
     return raw;
   }
 
@@ -897,7 +882,7 @@
     }, 60000);
 
     document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "visible" && Date.now() - lastFetch > REFRESH_AFTER_MS) refresh();
+      if (document.visibilityState === "visible" && Date.now() - lastFetch > CFG.sheet.refreshAfterMs) refresh();
     });
 
     setupInstallHint();

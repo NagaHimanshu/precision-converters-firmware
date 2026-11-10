@@ -8,16 +8,27 @@
    - See docs/CONFIG.md for a description of every setting.
    ========================================================================== */
 
+// The Apps Script web app (Deploy > Manage deployments > Web app URL). One address for the
+// Sheet's data and the Gallery; a new deployment gives a new one, so it is set once, here.
+var BACKEND_URL = "https://script.google.com/macros/s/AKfycbwteO3aU2rIHu0MPpr1wammPMLTrdRFmhwWbA6WhJV-RMqJmg8jjVVBkyxGJKcz6stX/exec";
+
 self.SITE_CONFIG = {
 
   /* ---------- Google Sheet (data source) ---------- */
   sheet: {
-    // The long ID from the sheet URL:
-    // https://docs.google.com/spreadsheets/d/<THIS PART>/edit
-    id: "1MEXBdLLJq7gbCIpEdubQQ-DJOkBXsEsPMxGFsVrcEUQ",
+    // The Sheet itself is private and its ID is NOT in this file (every phone can read this
+    // file). The site asks the Apps Script web app below, which reads the Sheet and hands
+    // back the tabs listed here (the script's Config.gs SITE_TABS must list the same names).
+    endpoint: BACKEND_URL,
 
-    // How each tab is read. {id} and {tab} are filled in automatically.
-    urlTemplate: "https://docs.google.com/spreadsheets/d/{id}/gviz/tq?tqx=out:csv&headers=1&sheet={tab}",
+    // Give up on the Sheet request after this long (the first one after a quiet spell can take several seconds).
+    requestTimeoutMs: 20000,
+
+    // A phone that comes back to the site after being away this long asks for the Sheet's
+    // details again (opening the site always asks). With the script's SITE_CACHE_SECONDS
+    // (10 s) a Sheet edit reaches an open phone within about the sum of the two. Don't go
+    // much lower: every phone coming back to the site makes one request to Apps Script.
+    refreshAfterMs: 30000,
 
     // Tab names exactly as they appear at the bottom of the Google Sheet.
     tabs: {
@@ -73,7 +84,7 @@ self.SITE_CONFIG = {
 
   /* ---------- Gallery (guest photo sharing) ---------- */
   gallery: {
-    endpoint: "https://script.google.com/macros/s/AKfycbwteO3aU2rIHu0MPpr1wammPMLTrdRFmhwWbA6WhJV-RMqJmg8jjVVBkyxGJKcz6stX/exec", // Apps Script web app URL; "" = Gallery shows "coming soon"
+    endpoint: BACKEND_URL,   // Apps Script web app URL; "" = Gallery shows "coming soon"
     googleClientId: "478674070390-cfa6vf8vrtsv01egt0eusgsih8olbfe7.apps.googleusercontent.com", // Google OAuth client ID (public by design); "" = no sign-in shown
     googleScriptUrl: "https://accounts.google.com/gsi/client",  // Google sign-in script (loaded only when needed)
     maxPhotosPerUpload: 20,        // photos accepted in one go

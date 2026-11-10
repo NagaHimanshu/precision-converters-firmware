@@ -15,6 +15,8 @@ const JPEG_MAGIC = [0xFF, 0xD8, 0xFF];
 const GOOGLE_ISSUERS = ["accounts.google.com", "https://accounts.google.com"];
 // Settings values that switch something off (the same words as NO in public/app.js).
 const OFF_PATTERN = /^(n|no|false|0|off|hide)$/i;
+// Actions that come without a phone code: they only read the wedding Sheet.
+const DEVICE_FREE_ACTIONS = ["sheet"];
 // Minutes Apps Script allows for an every-N-minutes trigger, and the one used otherwise.
 const TRIGGER_MINUTES_ALLOWED = [1, 5, 10, 15, 30];
 const TRIGGER_MINUTES_FALLBACK = 15;
@@ -56,7 +58,7 @@ function fail(code) {
 /* ---------- requests ---------- */
 
 // The request object, or null unless it is a JSON object with a string action and a
-// well-formed device code.
+// well-formed device code (the actions in DEVICE_FREE_ACTIONS need no device code).
 function parseRequest(text) {
   if (typeof text !== "string") return null;
   let req;
@@ -67,8 +69,27 @@ function parseRequest(text) {
   }
   if (!req || typeof req !== "object" || Array.isArray(req)) return null;
   if (typeof req.action !== "string") return null;
+  if (DEVICE_FREE_ACTIONS.indexOf(req.action) >= 0) return req;
   if (typeof req.device !== "string" || !DEVICE_PATTERN.test(req.device)) return null;
   return req;
+}
+
+/* ---------- the wedding Sheet's tabs ---------- */
+
+// The tabs to answer with: the requested names that are on the allowed list, each once, in
+// the allowed list's order. No `requested` at all = every allowed tab. null when nothing
+// asked for is allowed (or `requested` is not a list), so the request is refused.
+function siteTabsWanted(requested, allowed) {
+  if (requested === undefined || requested === null) return allowed.slice();
+  if (!Array.isArray(requested)) return null;
+  const out = allowed.filter((name) => requested.indexOf(name) >= 0);
+  return out.length ? out : null;
+}
+
+// Sheet values -> rows of text, every cell a string (a blank cell is ""), so the site
+// reads them just like the CSV it used to get.
+function siteRows(values) {
+  return (values || []).map((row) => row.map((x) => (x === null || x === undefined ? "" : String(x))));
 }
 
 // A name as typed by a guest, made safe to keep: control characters out, runs of

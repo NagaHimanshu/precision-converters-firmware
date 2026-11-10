@@ -53,7 +53,7 @@ The ones to look at now:
 | Setting | What to do |
 |---|---|
 | `OWNER_EMAIL` | Already filled in: the wedding account. Storage warning emails go here. Leave it. |
-| `WEDDING_SHEET_ID` | Already filled in: the same ID as `sheet.id` in `site-config.js`. The script reads only its Settings tab (for the pause switch). |
+| `WEDDING_SHEET_ID` | Already filled in: the wedding Sheet's ID. The script reads the Sheet for the site (the tabs in `SITE_TABS`, which the site shows) and its Settings tab (for the pause switch). The ID lives only here, never in `site-config.js`. |
 | `DRIVE_FOLDER_ID` | Leave it blank: `setup` (next part) creates a folder called **Wedding guest photos**. If you'd rather use a folder you already have, paste its Drive link (`https://drive.google.com/drive/folders/...`) or just the ID between the quotes. |
 | `DATA_SHEET_ID` | Leave it blank: `setup` creates the data spreadsheet. |
 | `GOOGLE_CLIENT_ID` | Leave it blank for now; Part 5 fills it in. |

@@ -55,8 +55,25 @@ Open the address it prints (usually <http://localhost:5000>). Stop with Ctrl+C.
 
 ## 6. Connect the Google Sheet
 
-Follow [SHEET_SETUP.md](SHEET_SETUP.md), then put the sheet ID into
-`public/site-config.js` → `sheet.id`.
+Follow [SHEET_SETUP.md](SHEET_SETUP.md): the Sheet is private and its ID goes into the
+Apps Script's `Config.gs` (`WEDDING_SHEET_ID`), not into `site-config.js`. The site asks the
+Apps Script for the Sheet's data, so step 7 (the Apps Script) has to be done first.
+
+**Moving a site that already reads a public Sheet to the private Sheet** (do it in this
+order, so you see each step work before the next):
+
+1. Paste the new `Config.gs`, `Logic.gs` and `Code.gs` into the Apps Script editor and
+   publish a **New version** (the Sheet is still public, so the old site keeps working).
+2. Make the Sheet private (Share → General access → Restricted) and add your helpers by
+   email as Editors. In the editor run **checkSheetAccess**: every tab should show its rows.
+   If not, set General access back to "Anyone with the link" and fix the cause first.
+3. Deploy the new site to the beta address (step 8). Open it: the home screen, Program,
+   Stay, Venues and Contacts should show your data. Edit a cell from the Sheets app on
+   your phone: it shows on the site within about 40 seconds (a phone that opens the site
+   afresh sees it within about 10).
+4. Deploy to the live address (`firebase deploy --only hosting`). Until a phone loads the
+   new version it shows its last saved details (it can't reach the now-private Sheet), and
+   the new version removes the Sheet ID from the files phones download.
 
 ## 7. Set up the Gallery (one time)
 
