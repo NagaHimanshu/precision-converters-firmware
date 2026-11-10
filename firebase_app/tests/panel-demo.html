@@ -59,16 +59,28 @@
   }
 
   var saved = { "gallery-name": "Ravi uncle" };
-  // signedin=1: as if signed in with Google (no name box, no Google link).
-  if (new URLSearchParams(location.search).get("signedin") === "1") saved["gallery-account"] = JSON.stringify({ name: "Ravi Kumar" });
+  var q = new URLSearchParams(location.search);
+  // signedin=1: as if signed in with Google (green "Using Google name" line, no name box).
+  if (q.get("signedin") === "1") saved["gallery-account"] = JSON.stringify({ name: "Ravi Kumar" });
   var identity = WeddingGallery.identity.create({
     storageGet: function (k) { return saved[k] || null; },
     storageSet: function (k, v) { saved[k] = v; },
   });
   var ctx = { cfg: C, text: C.text.gallery, h: h, icon: icon, fill: fill, locale: C.locale };
-  // Sign-in is not wired up here: the Google link shows, tapping it does nothing.
+  // Sign-in is not wired up here: tapping the Google link shows a stand-in for Google's
+  // button; google=1 taps it straight away (to see the Privacy Policy line under it).
   var panel = WeddingGallery.viewPanel.create({ ctx: ctx, identity: identity, onUpload: function () {},
-    signIn: { mountButton: function () {} } });
+    signIn: {
+      mountButton: function (el) {
+        el.replaceChildren(h("div", { style: "padding:10px 22px;border:1px solid #dadce0;border-radius:20px;font:500 15px sans-serif;color:#3c4043;background:#fff" },
+          "Sign in with Google"));
+      },
+      signOut: function () { return Promise.resolve(); },
+    } });
+  function tapGoogle() {
+    var link = panel.el.querySelector('[data-g="use-google"]');
+    if (q.get("google") === "1" && link) link.click();
+  }
   document.body.append(panel.el);
 
   // Gradient photos like the mockup's stand-ins.
@@ -92,10 +104,10 @@
   };
 
   self.addEventListener("message", function (e) {
-    if (e.data && e.data.files) panel.open(e.data.files);
+    if (e.data && e.data.files) { panel.open(e.data.files); tapGoogle(); }
   });
   if (self.parent !== self) self.parent.postMessage({ panelDemoReady: true }, "*");
-  else self.demoPhotos().then(function (files) { panel.open(files); });
+  else self.demoPhotos().then(function (files) { panel.open(files); tapGoogle(); });
 })();
 </script>
 </body>

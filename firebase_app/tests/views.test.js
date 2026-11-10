@@ -1238,7 +1238,10 @@
     var t = galleryFrame("/index.html?mock=ok#gallery");
     var t2 = null;
     return t.ready.then(function () {
-      eq(localStorage.getItem("gallery-account"), "null", "phone not told it's signed out");
+      // The photos saved on the phone show first; the server's answer follows.
+      return waitFor(function () { return localStorage.getItem("gallery-account") === "null"; },
+        "phone told it's signed out", PAGE_MS);
+    }).then(function () {
       return openPanel(t);
     }).then(function () {
       ok(shown(t.q('[data-g="name"]')), "name box missing");

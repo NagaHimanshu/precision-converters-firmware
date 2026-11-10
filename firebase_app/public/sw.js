@@ -2,7 +2,7 @@
    Strategy: try the network first (so edits show up), fall back to the saved
    copy when offline or the network is too slow. Sheet data is cached by app.js. */
 
-const CACHE = "site-v4";
+const CACHE = "site-v5";
 const SHELL = [
   "./",
   "index.html",

@@ -1,7 +1,10 @@
 /* "Ready to share" bottom panel: the picked photos (× takes one out, ＋ More picks
-   again), the guest's name, one Upload button, and the small "or use my Google name"
-   link (which becomes Google's button when tapped) with a small Privacy link. Also the shared Remove / Keep
-   question. The phone's Back closes the panel (it adds one history entry while open). */
+   again, Camera takes a new one), the guest's name (filled in with last time's), one
+   Upload button, and the small "or use my Google name" link (which becomes Google's
+   button when tapped, with a tiny Privacy Policy line under it). Signed in, the name box
+   is a green "Using Google name ✓" line with "Not you? Sign out". Also the shared
+   Remove / Keep question. The phone's Back closes the panel (it adds one history entry
+   while open). */
 (function () {
   "use strict";
 
@@ -12,7 +15,8 @@
   // If the Back that close() asked for never arrives (it always should), stop waiting after this long.
   const BACK_FALLBACK_MS = 800;
 
-  // signIn (only when Google sign-in is on): { mountButton(el) } puts Google's button in el.
+  // signIn (only when Google sign-in is on): { mountButton(el) } puts Google's button in el,
+  // signOut(): Promise (rejects when the server couldn't be told).
   function create({ ctx, identity, onUpload, signIn }) {
     const { text, h, fill, icon } = ctx;
     const G = ctx.cfg.gallery;
@@ -27,11 +31,16 @@
     let askedFrom = null;        // focus before the question, given back after it
 
     const input = h("input", { type: "file", accept: "image/*", multiple: "", class: "g-file",
-      tabindex: "-1", "aria-hidden": "true", onchange: picked });
+      tabindex: "-1", "aria-hidden": "true", onchange: () => picked(input) });
+    // capture: the phone opens its camera straight away (elsewhere it is a normal file picker).
+    const cameraInput = h("input", { type: "file", accept: "image/*", capture: "environment", class: "g-file",
+      tabindex: "-1", "aria-hidden": "true", "data-g": "camera-input", onchange: () => picked(cameraInput) });
 
     const thumbs = h("div", { class: "g-p-thumbs" });
     const moreButton = h("button", { type: "button", class: "g-p-more", "data-g": "panel-more", onclick: () => pick() },
       h("span", { class: "g-p-plus", "aria-hidden": "true" }, "＋"), h("span", null, text.panelMore));
+    const cameraButton = h("button", { type: "button", class: "g-p-more g-p-camera", "data-g": "panel-camera",
+      onclick: () => takePhoto() }, icon("gallery"), h("span", null, text.panelCamera));
     const tooMany = h("p", { class: "g-p-note", "data-g": "panel-too-many", hidden: "" });
     const nameInput = h("input", { type: "text", id: uid + "-name", class: "g-p-input", "data-g": "name",
       maxlength: String(G.nameMaxLength), autocomplete: "name", enterkeyhint: "done",
@@ -48,17 +57,21 @@
     const googleLink = h("button", { type: "button", class: "g-p-google", "data-g": "use-google",
       onclick: () => useGoogle() }, text.useGoogleName);
     const googleBox = h("div", { class: "g-signin g-p-signin", "data-g": "signin" });
-    // The small Privacy link sits next to it (and stays under Google's button). It opens in a
-    // new tab, so the photos just picked aren't lost.
-    const privacyLink = h("a", { class: "g-privacy", "data-g": "privacy-link", href: G.privacyUrl,
-      target: "_blank", rel: "noopener" }, text.privacyLink);
-    const googleSpot = h("div", { class: "g-p-googlespot" }, googleOn ? [googleLink, privacyLink] : "");
+    // Signed in with a name: this green line takes the name box's place.
+    const usingName = h("p", { class: "g-p-using-name" });
+    const notYouButton = h("button", { type: "button", class: "g-p-google g-p-notyou", "data-g": "not-you",
+      onclick: () => signOutNow() }, text.notYou);
+    const signOutFailed = h("p", { class: "g-signin-status", "data-g": "panel-signout-failed", role: "status", hidden: "" },
+      text.signOutFailed);
+    const usingBox = h("div", { class: "g-p-using", "data-g": "using-google", hidden: "" },
+      usingName, googleOn ? [notYouButton, signOutFailed] : "");
+    const googleSpot = h("div", { class: "g-p-googlespot" }, googleOn ? googleLink : "");
     const closeButton = h("button", { type: "button", class: "g-p-close", "data-g": "panel-close",
       "aria-label": text.close, onclick: () => close() }, "×");
     const sheet = h("div", { class: "g-sheet", role: "dialog", "aria-modal": "true", "aria-labelledby": uid + "-title" },
       h("div", { class: "g-p-grab", "aria-hidden": "true" }),
       h("div", { class: "g-p-head" }, h("h2", { id: uid + "-title" }, text.panelTitle), closeButton),
-      thumbs, tooMany, nameBox, uploadButton, googleSpot);
+      thumbs, tooMany, nameBox, usingBox, uploadButton, googleSpot);
     const panel = h("div", { class: "g-panel", "data-g": "panel", hidden: "" }, h("div", { class: "g-dim" }), sheet);
 
     const question = h("p", { class: "g-c-text", id: uid + "-q" });
@@ -70,7 +83,7 @@
       h("div", { class: "g-c-box", role: "alertdialog", "aria-modal": "true", "aria-labelledby": uid + "-q" },
         question, h("div", { class: "g-c-actions" }, keepButton, removeButton)));
 
-    const el = h("div", { class: "g-panel-root" }, input, panel, dialog);
+    const el = h("div", { class: "g-panel-root" }, input, cameraInput, panel, dialog);
 
     /* ---------- picking ---------- */
 
@@ -79,9 +92,14 @@
       input.click();
     }
 
-    function picked() {
-      const files = Array.from(input.files || []);
-      input.value = "";                     // the same photo can be picked again later
+    function takePhoto() {
+      cameraInput.value = "";
+      cameraInput.click();
+    }
+
+    function picked(from) {
+      const files = Array.from(from.files || []);
+      from.value = "";                      // the same photo can be picked again later
       if (!files.length) return;
       if (isOpen()) add(files);
       else open(files);
@@ -108,8 +126,8 @@
 
     function renderThumbs() {
       const max = G.maxPhotosPerUpload;
-      moreButton.hidden = chosen.length >= max;
-      thumbs.replaceChildren(...chosen.slice(0, max).map((c) => c.el), moreButton);
+      moreButton.hidden = cameraButton.hidden = chosen.length >= max;
+      thumbs.replaceChildren(...chosen.slice(0, max).map((c) => c.el), moreButton, cameraButton);
       tooMany.hidden = chosen.length <= max;
       tooMany.textContent = fill(text.tooMany, { max });
       uploadButton.disabled = !chosen.length;
@@ -170,17 +188,44 @@
 
     /* ---------- Google sign-in ---------- */
 
+    // The tiny last line under Google's button. It opens in a new tab, so the photos just
+    // picked aren't lost.
+    function privacyLine() {
+      const [before, after] = String(text.privacyLine).split("{link}");
+      return h("p", { class: "g-privacy-line" }, before || "",
+        h("a", { class: "g-privacy", "data-g": "privacy-link", href: G.privacyUrl, target: "_blank", rel: "noopener" },
+          text.privacyLink), after || "");
+    }
+
     function useGoogle() {
       if (!googleOn || googleBox.isConnected) return;
-      googleSpot.replaceChildren(googleBox, privacyLink);
+      googleSpot.replaceChildren(googleBox, privacyLine());
       signIn.mountButton(googleBox);
     }
 
-    // Signed in or out (here, on Photos by me, or as the server says): the name box and
-    // sign-in follow. An account without a name keeps the name box (else uploads go nameless).
+    // "Not you?": a sign-out that didn't reach the server leaves the guest signed in, and says so.
+    function signOutNow() {
+      if (!googleOn || notYouButton.disabled) return;
+      notYouButton.disabled = true;
+      signOutFailed.hidden = true;
+      let done;
+      try { done = Promise.resolve(signIn.signOut()); } catch (e) { done = Promise.reject(e); }
+      done.catch((e) => {
+        console.warn("Gallery sign-out failed:", e);
+        signOutFailed.hidden = false;
+      }).then(() => { notYouButton.disabled = false; });
+    }
+
+    // Signed in or out (here, on Photos by me, or as the server says): the name box, the
+    // green line and sign-in follow. An account without a name keeps the name box (else
+    // uploads go nameless).
     function syncAccount() {
       const account = identity.account();
-      nameBox.hidden = !!(account && account.name);
+      const named = !!(account && account.name);
+      nameBox.hidden = named;
+      usingBox.hidden = !named;
+      usingName.textContent = named ? fill(text.usingGoogleName, { name: account.name }) : "";
+      if (!account) signOutFailed.hidden = true;
       googleSpot.hidden = !!account || !googleOn;
     }
 

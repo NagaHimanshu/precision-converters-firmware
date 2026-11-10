@@ -102,6 +102,12 @@ phones with the real Google backend.
 - [ ] Gallery opens and shows "No photos yet" (or the photos so far)
 - [ ] **Add photos** → pick 5–10 photos → "Ready to share" → type a name → **Upload**:
       the rings fill, the photos appear in the grid, and in the Drive photos folder
+- [ ] In "Ready to share", the **Camera** tile next to **More** opens the camera; the
+      photo taken joins the others in the panel. Next time, the name box already has
+      the name used last time
+- [ ] Open the site, wait on Home for a few seconds, then tap Gallery: the photos are
+      there at once or within a second or two (moving bars while they come on a first
+      visit). Reopen the Gallery later: the photos seen before show straight away
 - [ ] A name starting with `=`, `+`, `-` or `@` (e.g. `=Ravi`, `+Uncle`, `-Anu`,
       `@Sita`) shows on the photo exactly as typed, with no `'` in front
 - [ ] Heart a photo: the count goes up; on the other phone the count shows after a
@@ -118,7 +124,10 @@ phones with the real Google backend.
 - [ ] If sign-in is set up: Photos by me → "Shared photos from another phone?" → Google
       button → sign in. Works in **Chrome** (Android) and **Safari** (iPhone), then shows
       "Signed in as …". Sign in on the second phone with the same account: the first
-      phone's photos show under Photos by me there too. **Sign out** works
+      phone's photos show under Photos by me there too. **Sign out** works. In "Ready to
+      share", "or use my Google name" shows Google's button with a tiny "Read our Privacy
+      Policy" line under it; once signed in, the name box is a green "Using Google name ✓
+      — …" line, and **Not you? Sign out** under it brings the name box back
 - [ ] Open the beta link from inside **WhatsApp** and **Instagram** (tap it in a chat):
       the Gallery works and photos can be added; sign-in either works or says "Sign-in
       isn't available here. You can still add photos." (or Google shows its own error

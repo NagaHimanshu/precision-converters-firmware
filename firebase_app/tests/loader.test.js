@@ -196,4 +196,93 @@
       return uploadsFlag("/index.html#gallery", "true");
     });
   });
+
+  /* ---------- the first photos asked for early, from Home ---------- */
+
+  // Backend requests the page has finished (thumbnails are /mock-api/img/..., not these).
+  function backendCalls(f) {
+    return f.contentWindow.performance.getEntriesByType("resource").filter(function (e) {
+      return /\/mock-api\?/.test(e.name) && e.initiatorType === "fetch";
+    });
+  }
+
+  function pause(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+
+  test("early list asked from Home, quietly", function () {
+    localStorage.removeItem("gallery-device");
+    return withFrame("/index.html?early=100&fresh=1", function (f) {
+      return waitFor(function () { return backendCalls(f).length; }, "early list").then(function () {
+        var d = doc(f);
+        eq(galleryRequests(f), [], "gallery files not loaded for it");
+        eq(d.getElementById("gallery-body").children.length, 0, "nothing drawn");
+        ok(d.getElementById("status").hidden, "no status line");
+        ok(!d.getElementById("view-home").hidden, "still on Home");
+        ok(/^[0-9a-f]{32}$/.test(localStorage.getItem("gallery-device") || ""), "phone code made for it");
+        return pause(400).then(function () { eq(backendCalls(f).length, 1, "asked once only"); });
+      });
+    });
+  });
+
+  test("Gallery opened after the early list uses it", function () {
+    return withFrame("/index.html?early=100&fresh=1", function (f) {
+      return waitFor(function () { return backendCalls(f).length; }, "early list").then(function () {
+        f.contentWindow.location.hash = "gallery";
+        return waitFor(function () { return doc(f).querySelectorAll('#gallery-body [data-g="tile"]').length; }, "tiles");
+      }).then(function () {
+        return pause(300);
+      }).then(function () {
+        eq(backendCalls(f).length, 1, "no second list request");
+      });
+    });
+  });
+
+  test("early list that fails changes nothing; the Gallery asks again", function () {
+    return withFrame("/index.html?early=100&fresh=1&mock=html", function (f) {
+      return waitFor(function () { return backendCalls(f).length; }, "early list").then(function () {
+        return pause(200);
+      }).then(function () {
+        var d = doc(f);
+        ok(d.getElementById("status").hidden, "no status line");
+        eq(d.getElementById("gallery-body").children.length, 0, "nothing drawn");
+        f.contentWindow.location.hash = "gallery";
+        return waitFor(function () { return backendCalls(f).length >= 2; }, "Gallery's own list");
+      });
+    });
+  });
+
+  test("no early list when it is off, or the Gallery is hidden", function () {
+    return withFrame("/index.html?early=0", function (f) {
+      return waitFor(function () { return doc(f).querySelectorAll("#home-tiles .tile").length; }, "home").then(function () {
+        return pause(600);
+      }).then(function () {
+        eq(backendCalls(f).length, 0, "early=0");
+      });
+    }).then(function () {
+      return withFrame("/index.html?early=100&sheet=hidden", function (f) {
+        return waitFor(function () { return doc(f).querySelectorAll("#home-tiles .tile").length; }, "home").then(function () {
+          return pause(600);
+        }).then(function () {
+          eq(backendCalls(f).length, 0, "Gallery hidden");
+        });
+      });
+    }).then(function () {
+      // Put the normal Sheet back in the page's saved copy for the tests after this one.
+      return withFrame("/index.html?early=0", function (f) {
+        return waitFor(function () {
+          return doc(f).querySelector('#home-tiles a[href="#gallery"], #home-tiles [data-route="gallery"]') ||
+            [].some.call(doc(f).querySelectorAll("#home-tiles .tile"), function (t) { return /gallery/i.test(t.textContent); });
+        }, "Gallery tile back");
+      });
+    });
+  }, { timeoutMs: 15000 });
+
+  test("Gallery's loading shows the three bars", function () {
+    return withFrame("/index.html?mock=slow&fresh=1#gallery", function (f) {
+      return waitFor(function () { return doc(f).querySelector("#gallery-body .loading-bars"); }, "bars").then(function (bars) {
+        eq(bars.querySelectorAll("span").length, 3);
+        eq([bars.getAttribute("role"), bars.getAttribute("aria-label")], ["status", T().loading]);
+        ok(getComputedStyle(bars.querySelector("span")).animationName === "loading-bar", "bars not moving");
+      });
+    });
+  }, { timeoutMs: 15000 });
 })();

@@ -102,6 +102,11 @@ self.SITE_CONFIG = {
     previewSizePx: 320,            // small copy shown while choosing and uploading (longest side)
     progressTickMs: 500,           // how often the upload rings are redrawn
     progressEstimateMs: 8000,      // rough time to send one photo; the ring fills on this time scale
+    // The site asks for the first photos quietly in the background this long after it has
+    // finished opening (only when the Gallery is shown on Home), so they are often there
+    // before the Gallery is tapped. 0 = don't ask early.
+    earlyListDelayMs: 2000,
+    earlyListMaxAgeMs: 120000,     // an early answer older than this is not used (asked again instead)
     privacyUrl: "privacy.html",    // the privacy page (linked from the sign-in card and the Ready-to-share panel)
     privacyContactsUrl: "./#contacts",  // where the privacy page's "Contact the family" goes
   },
@@ -123,6 +128,7 @@ self.SITE_CONFIG = {
       goldText: "#8C6A12",         // gold used for text (darker, readable)
       ink: "#3E2B30",              // main text colour
       inkSoft: "#6E5A5F",          // secondary text
+      success: "#2E7D4F",          // "Using Google name ✓" line (green)
     },
     fonts: {
       script: "Pinyon Script",     // couple names
@@ -227,12 +233,15 @@ self.SITE_CONFIG = {
       fullAction: "Contact us",
       panelTitle: "Ready to share",
       panelMore: "More",
+      panelCamera: "Camera",        // tile next to More: opens the phone's camera
       panelRemove: "Don't share this photo",   // read aloud for the × on a chosen photo
       nameLabel: "Your name",
       nameOptional: "(optional)",
       nameHint: "Shown as \"By {name}\". We'll remember it on this phone.",
       uploadButton: "Upload",
       useGoogleName: "or use my Google name",
+      usingGoogleName: "Using Google name ✓ — {name}",   // green line in place of the name box once signed in
+      notYou: "Not you? Sign out",  // small link under it
       tooMany: "We'll share the first {max} now — tap Add photos again for the rest.",
       uploading: "Uploading {done} of {total}… you can keep browsing",
       keepOpen: "Keep this page open until uploads finish",
@@ -260,7 +269,8 @@ self.SITE_CONFIG = {
       signOutFailed: "Couldn't sign out — please try again.",
       signOut: "Sign out",
       signInNote: "Your name will appear on photos you share.",
-      privacyLink: "Privacy",       // small link to the privacy page
+      privacyLine: "Read our {link}",   // tiny last line under Google's button; {link} = privacyLink
+      privacyLink: "Privacy Policy",    // the link's words
       signInUnavailable: "Sign-in isn't available here. You can still add photos.",
       errors: {
         offline: "You seem to be offline. Please check your internet and try again.",
@@ -279,46 +289,46 @@ self.SITE_CONFIG = {
     // The privacy page (privacy.html). Plain text only; each section is a heading and
     // short paragraphs; contact: true adds a "Contact the family" button under it.
     privacy: {
-      title: "Privacy",
+      title: "Privacy Policy",
       intro: "A few plain words about the photos shared on this site.",
-      contactLink: "Contact the family",
+      contactLink: "Contact us",
       sections: [
         {
           heading: "What we keep",
           paragraphs: [
-            "The photos guests share. Each photo is made smaller on your phone before it is sent, and the location saved in it is removed.",
-            "The name you type, if you type one, the Google name if you sign in with Google, and the hearts photos get.",
+            "The photos guests share. Each photo is compressed on your phone before it is sent, and the location is not saved.",
+            "The name you type if you type one, or the Google name if you sign in with Google",
           ],
         },
         {
           heading: "What we never keep",
           paragraphs: [
-            "Google email addresses. Signing in with Google is only used for your name and to recognise your photos in \"Photos by me\".",
+            "Google email addresses. Signing-in with Google is only used for your name and to recognise your photos in \"Photos by me\".",
           ],
         },
         {
           heading: "Your phone's code",
           paragraphs: [
-            "Each phone gets a random code, kept on the phone. It is only used to show \"Photos by me\" and to let you delete your own photos.",
+            "Each phone gets a random code, kept on the phone. It is only used to show \"Photos by me\" and to let you delete photos you uploaded.",
           ],
         },
         {
           heading: "Where photos are kept",
           paragraphs: [
-            "In the couple's Google Drive and Google Sheets. Anyone with the link to this site can see the shared photos.",
+            "Uploaded to Rishika's Google Drive.",
           ],
         },
         {
           heading: "Removing a photo",
           paragraphs: [
-            "Delete it yourself in \"Photos by me\", or contact the family and we will remove it.",
+            "Delete it yourself in \"Photos by me\", or contact us and we will remove it.",
           ],
           contact: true,
         },
         {
           heading: "Questions?",
           paragraphs: [
-            "Please contact the family. We're happy to help.",
+            "Please contact us. We're happy to help.",
           ],
           contact: true,
         },

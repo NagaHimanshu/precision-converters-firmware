@@ -415,4 +415,160 @@
     await s.refresh();
     eq(identity.account(), { name: "Asha" }, "a failed list changes nothing");
   });
+
+  /* ---------- the saved list at once, the early answer from app.js ---------- */
+
+  // A list answer that only comes when release() is called.
+  function held() {
+    var release;
+    var answer = new Promise(function (r) { release = r; });
+    return { answer: answer, release: function (body) { release(body); return wait(0); } };
+  }
+
+  function saveList(st, ps) {
+    st.set("gallery-saved", JSON.stringify({ photos: ps, total: ps.length }));
+  }
+
+  test("saved list shown at once, replaced when the fresh one arrives", async function () {
+    var st = fakeStorage();
+    saveList(st, photos(3, 0));
+    var h = held();
+    var s = make(fakeApi({ list: function () { return h.answer; } }), st);
+    var seen = [];
+    s.subscribe(function (state) { seen.push(state.status); });
+    var done = s.load("all");
+    var now = s.state;
+    eq([now.status, now.early, now.fromSaved], ["ready", true, false], "ready straight away, not 'offline'");
+    eq(now.photos.map(function (p) { return p.id; }), ["p0", "p1", "p2"]);
+    ok(seen.indexOf("loading") < 0, "never says loading");
+    eq(JSON.parse(st.get("gallery-saved")).photos.length, 3);
+    await h.release(listOk([photo("new")].concat(photos(3, 0)), null, 4));
+    await done;
+    eq(s.state.photos.map(function (p) { return p.id; }), ["new", "p0", "p1", "p2"]);
+    eq([s.state.early, s.state.total], [false, 4]);
+    eq(JSON.parse(st.get("gallery-saved")).photos[0].id, "new", "saved list updated");
+  });
+
+  test("saved list shown at once, then the list fails: says it is the saved one", async function () {
+    var st = fakeStorage();
+    saveList(st, photos(2, 0));
+    var s = make(fakeApi({ list: unavailable }), st);
+    var warn = console.warn;
+    console.warn = function () {};
+    try { await s.load("all"); } finally { console.warn = warn; }
+    eq([s.state.status, s.state.early, s.state.fromSaved, s.state.error], ["ready", false, true, "unavailable"]);
+    eq(s.state.photos.length, 2);
+  });
+
+  test("first visit (nothing saved) still says loading", async function () {
+    var h = held();
+    var s = make(fakeApi({ list: function () { return h.answer; } }));
+    var done = s.load("all");
+    eq([s.state.status, s.state.early], ["loading", false]);
+    await h.release(listOk(photos(2, 0)));
+    await done;
+    eq(s.state.status, "ready");
+  });
+
+  test("no saved list for Photos by me", async function () {
+    var st = fakeStorage();
+    saveList(st, photos(2, 0));
+    var h = held();
+    var s = make(fakeApi({ list: function () { return h.answer; } }), st);
+    var done = s.load("mine");
+    eq([s.state.status, s.state.photos.length], ["loading", 0]);
+    await h.release(listOk([]));
+    await done;
+  });
+
+  test("photo shared while the saved list shows is kept when the fresh list comes", async function () {
+    var st = fakeStorage();
+    saveList(st, photos(2, 0));
+    var h = held();
+    var s = make(fakeApi({ list: function () { return h.answer; } }), st);
+    var done = s.load("all");
+    s.insert(photo("mine1", { mine: true }));
+    await h.release(listOk(photos(2, 0), null, 2));   // asked for before the upload landed
+    await done;
+    eq(s.state.photos.map(function (p) { return p.id; }), ["mine1", "p0", "p1"]);
+    eq(s.state.total, 3);
+  });
+
+  test("no more pages or quiet refresh while the saved list shows", async function () {
+    var st = fakeStorage();
+    saveList(st, photos(2, 0));
+    var h = held();
+    var api = fakeApi({ list: function () { return h.answer; } });
+    var s = make(api, st);
+    var done = s.load("all");
+    await s.loadMore();
+    await s.refresh();
+    eq(api.count("list").length, 1);
+    await h.release(listOk(photos(2, 0)));
+    await done;
+  });
+
+  function makeEarly(api, st, takeEarly) {
+    st = st || fakeStorage();
+    var identity = G().identity.create({ storageGet: st.get, storageSet: st.set });
+    var store = G().store.create({ api: api, identity: identity, cfg: CFG(), storageGet: st.get, storageSet: st.set,
+      takeEarly: takeEarly });
+    return { store: store, identity: identity };
+  }
+
+  test("early answer used instead of asking again", async function () {
+    var api = fakeApi({ list: function () { return listOk(photos(1, 50)); } });
+    var asked = [];
+    var e = makeEarly(api, null, function (device) {
+      asked.push(device);
+      return Promise.resolve(listOk(photos(2, 0), "2", 9));
+    });
+    await e.store.load("all");
+    eq(api.count("list").length, 0, "no second request");
+    eq(e.store.state.photos.map(function (p) { return p.id; }), ["p0", "p1"]);
+    eq([e.store.state.next, e.store.state.total], ["2", 9]);
+    eq(asked, [e.identity.device()], "asked with this phone's code");
+    await e.store.refresh();
+    eq(api.count("list").length, 1, "later lists ask as usual");
+  });
+
+  test("early answer that failed, or none: asks as usual", async function () {
+    var api = fakeApi({ list: function () { return listOk(photos(1, 50)); } });
+    var a = makeEarly(api, null, function () { return Promise.reject(new Error("offline")); });
+    await a.store.load("all");
+    eq(a.store.state.photos.map(function (p) { return p.id; }), ["p50"]);
+    var b = makeEarly(api, null, function () { return null; });
+    await b.store.load("all");
+    eq(b.store.state.photos.map(function (p) { return p.id; }), ["p50"]);
+    var c = makeEarly(api, null, function () { return Promise.resolve({ ok: false, code: "busy" }); });
+    await c.store.load("all");
+    eq(c.store.state.photos.map(function (p) { return p.id; }), ["p50"], "a not-ok answer is not used");
+    var d = makeEarly(api, null, function () { throw new Error("app.js hiccup"); });
+    await d.store.load("all");
+    eq(d.store.state.photos.map(function (p) { return p.id; }), ["p50"], "a throwing hand-off is not used");
+  });
+
+  test("early answer only for All photos", async function () {
+    var api = fakeApi({ list: function () { return listOk(photos(1, 50)); } });
+    var taken = 0;
+    var e = makeEarly(api, null, function () { taken++; return Promise.resolve(listOk(photos(2, 0))); });
+    await e.store.load("mine");
+    eq(taken, 0);
+    eq(api.calls[0][1].mine, true);
+  });
+
+  test("heart tapped while the early answer is on its way is kept", async function () {
+    var h = held();
+    var api = fakeApi({ heart: function () { return { ok: true, hearts: 1, hearted: true }; },
+      list: function () { return listOk(photos(1, 0)); } });
+    var st = fakeStorage();
+    saveList(st, photos(1, 0));
+    var e = makeEarly(api, st, function () { return h.answer; });
+    var done = e.store.load("all");
+    e.store.toggleHeart("p0");
+    await wait(0);
+    await h.release(listOk(photos(1, 0)));   // asked for before the heart: still says 0
+    await done;
+    eq([find(e.store, "p0").hearted, find(e.store, "p0").hearts], [true, 1]);
+  });
 })();

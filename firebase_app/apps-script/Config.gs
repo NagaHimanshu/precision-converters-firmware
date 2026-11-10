@@ -55,13 +55,18 @@ var CONFIG = {
   PAGE_SIZE_MAX: 60,
   // Most uploads accepted from one phone in one hour.
   RATE_LIMIT_PER_HOUR: 100,
-  // Seconds the Settings tab answer (pause switch) is remembered.
-  SETTINGS_CACHE_SECONDS: 60,
+  // Seconds the Settings tab answer (pause switch) is remembered: a change to
+  // gallery_uploads reaches the backend within this long (the site itself hides Add photos
+  // as soon as it reads the Sheet).
+  SETTINGS_CACHE_SECONDS: 300,
   // Seconds the Drive storage check (album full / nearly full) is remembered, and how long
   // a "storage full" error from Drive keeps uploads stopped before Drive is asked again.
-  STORAGE_CACHE_SECONDS: 60,
-  // Seconds the photo / heart / device lists are remembered between requests.
-  LIST_CACHE_SECONDS: 10,
+  STORAGE_CACHE_SECONDS: 300,
+  // Seconds the photo / heart / device lists are remembered between requests. Changes made
+  // through the site (uploads, hearts, deletes, sign-ins) show at once whatever this is;
+  // only edits typed by hand into the gallery data spreadsheet wait, until the next Drive
+  // sync (SYNC_MINUTES) reads the lists again. Keep it longer than SYNC_MINUTES.
+  LIST_CACHE_SECONDS: 1200,
   // Largest piece the remembered lists are cut into, in bytes (Google's limit is 100 KB).
   CACHE_CHUNK_BYTES: 90000,
   // How often photos deleted directly in Drive are removed from the gallery, in minutes.

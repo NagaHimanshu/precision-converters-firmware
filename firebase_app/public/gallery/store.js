@@ -1,6 +1,7 @@
 /* Photo list state: first page, more pages, quiet refresh, the list saved on the
-   phone for offline viewing, hearts (shown at once, sent when things settle), and
-   deleting the guest's own photos (the Remove / Keep question is asked before, by gallery.js). */
+   phone (shown at once while the fresh one is on its way, and when offline), hearts
+   (shown at once, sent when things settle), and deleting the guest's own photos (the
+   Remove / Keep question is asked before, by gallery.js). */
 (function () {
   "use strict";
 
@@ -38,10 +39,13 @@
     return (err && err.code) || "unavailable";
   }
 
-  function create({ api, identity, cfg, storageGet, storageSet }) {
+  // takeEarly (optional): takeEarly(device) gives the first page asked for early by app.js
+  // (a Promise of the list answer) once, or null.
+  function create({ api, identity, cfg, storageGet, storageSet, takeEarly }) {
     const s = {
       tab: "all", photos: [], total: 0, next: null, status: "idle", error: null,
       fromSaved: false, uploadsOpen: true, full: false,
+      early: false,               // the saved list is shown while the fresh one is on its way
       account: identity.account ? identity.account() : null,   // the server's answer replaces it
       deleting: [],               // ids being deleted right now
       deleteError: null,          // { id, code }: the last delete that failed
@@ -55,6 +59,7 @@
     const confirmed = new Map();  // photo id -> { seq, hearts, hearted }: heart answers newer than list request `seq`
     const deletes = new Map();    // photo id -> its delete request (one at a time per photo)
     const gone = new Set();       // ids deleted this visit: a list sent before the delete must not bring them back
+    const added = new Set();      // ids shared from this phone this visit: an older list must not hide them
     let snap = null;
 
     /* ---------- state out ---------- */
@@ -82,7 +87,7 @@
     /* ---------- phone storage ---------- */
 
     function save() {
-      if (s.tab !== "all" || s.fromSaved) return;
+      if (s.tab !== "all" || s.fromSaved || s.early) return;
       storageSet(SAVED_KEY, JSON.stringify({ photos: s.photos.slice(0, cfg.savedListSize), total: s.total }));
     }
 
@@ -136,6 +141,20 @@
         s.tab === "mine" ? { mine: true } : {}, extra)).then((res) => ({ res, seq }));
     }
 
+    // The first page of All photos: the early answer when app.js has one (it was asked for
+    // before anything here, so it is older than every heart), else a normal request. A
+    // failed early answer just means asking again.
+    function firstList() {
+      let early = null;
+      try { early = s.tab === "all" && takeEarly ? takeEarly(identity.device()) : null; } catch (e) { early = null; }
+      if (!early) return list({});
+      const seq = ++listSeq;
+      return Promise.resolve(early).then((res) => {
+        if (!res || res.ok !== true) throw new Error("no early answer");
+        return { res, seq };
+      }).catch(() => list({}));
+    }
+
     // Photos from list request `seq`, keeping heart answers that came back after it was sent
     // (a slow list may still carry the state from before the heart, or a photo deleted since).
     function listPhotos(res, seq) {
@@ -163,12 +182,18 @@
     }
 
     function replace(res, seq) {
-      s.photos = listPhotos(res, seq);
+      const fresh = listPhotos(res, seq);
+      const have = new Set(fresh.map((p) => p.id));
+      // Shared from this phone after this list was asked for: kept on top.
+      const kept = s.photos.filter((p) => added.has(p.id) && !have.has(p.id));
+      s.photos = kept.concat(fresh);
       s.next = cleanNext(res.next);
       applyMeta(res);
+      s.total += kept.length;
       s.status = "ready";
       s.error = null;
       s.fromSaved = false;
+      s.early = false;
       pagedOn = false;
       save();
       emit();
@@ -195,24 +220,34 @@
         s.total = 0;
         s.next = null;
         s.fromSaved = false;
+        s.early = false;
       }
       s.deleteError = null;
       const mine = ++run;
       listing = true;
-      s.status = "loading";
       s.error = null;
+      // All photos with nothing shown yet: the list saved on the phone straight away (no
+      // waiting), quietly replaced when the fresh one arrives.
+      const saved = !s.photos.length && s.tab === "all" ? readSaved() : null;
+      if (saved) {
+        s.photos = saved.photos;
+        s.total = saved.total;
+        s.next = null;
+        s.early = true;
+        s.status = "ready";
+      } else if (!s.early) {
+        s.status = "loading";
+      }
       emit();
       try {
-        const { res, seq } = await list({});
+        const { res, seq } = await (s.tab === "all" ? firstList() : list({}));
         if (mine !== run) return;
         replace(res, seq);
       } catch (e) {
         if (mine !== run) return;
         console.warn("Gallery list failed:", e);
-        const saved = !s.photos.length && s.tab === "all" ? readSaved() : null;
-        if (saved) {
-          s.photos = saved.photos;
-          s.total = saved.total;
+        if (s.early) {           // the saved list stays, now saying so
+          s.early = false;
           s.next = null;
           s.fromSaved = true;
         }
@@ -227,7 +262,7 @@
     }
 
     async function loadMore() {
-      if (!s.next || listing || s.status !== "ready" || s.fromSaved) return;
+      if (!s.next || listing || s.status !== "ready" || s.fromSaved || s.early) return;
       const mine = run;
       listing = true;
       try {
@@ -260,7 +295,7 @@
       try {
         const { res, seq } = await list({});
         if (mine !== run) return;
-        if (s.status === "ready" && !s.fromSaved) merge(res, seq);
+        if (s.status === "ready" && !s.fromSaved && !s.early) merge(res, seq);
         else replace(res, seq);
       } catch (e) {
         if (mine === run) console.warn("Gallery refresh failed:", e);
@@ -342,6 +377,7 @@
     function insert(photo) {
       const p = cleanPhoto(photo);
       if (!p || gone.has(p.id)) return;
+      added.add(p.id);
       const i = s.photos.findIndex((x) => x.id === p.id);
       if (i >= 0) s.photos[i] = p;
       else {

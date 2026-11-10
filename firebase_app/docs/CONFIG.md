@@ -44,7 +44,7 @@ Setting it up (Drive, Apps Script, Google sign-in): [GALLERY_SETUP.md](GALLERY_S
 | `retries` | Extra tries for a failed request. |
 | `retryBackoffMs` | Wait before the first retry (doubles each time). |
 | `pageSize` | Photos fetched per page. |
-| `savedListSize` | Photos remembered on the phone for offline viewing. |
+| `savedListSize` | Photos remembered on the phone. They show the moment the Gallery opens (fresh ones replace them a second or two later), and when the phone is offline. |
 | `thumbSizePx` / `fullSizePx` | Picture width for the grid / for full screen. |
 | `thumbRetries` | A grid picture that didn't load (e.g. a photo shared a moment ago, or Google busy) is asked for again on each refresh, at most this many times; then it stays a soft grey square. A photo shared from this phone shows its own small copy meanwhile. |
 | `thumbUrl` / `fullUrl` | Picture address patterns; `{id}` and `{size}` are filled in. |
@@ -57,7 +57,9 @@ Setting it up (Drive, Apps Script, Google sign-in): [GALLERY_SETUP.md](GALLERY_S
 | `previewSizePx` | Longest side (pixels) of the small copy shown while photos are chosen and uploading. |
 | `progressTickMs` | How often the upload rings are redrawn. |
 | `progressEstimateMs` | Rough time to send one photo; the ring fills on this time scale (real sending progress can't be measured). |
-| `privacyUrl` | The privacy page (`privacy.html`), linked from the sign-in card on Photos by me and from the Ready-to-share panel. Its words: [`text.privacy`](#textprivacy-privacy-page). |
+| `earlyListDelayMs` | The site asks for the Gallery's first photos quietly in the background this long (ms) after it has finished opening, so they are often there before the Gallery is tapped. Only when the Gallery is shown on Home; one request, nothing on screen changes, a failure is ignored (the Gallery then asks itself). `0` = don't ask early. |
+| `earlyListMaxAgeMs` | An early answer older than this (ms) is not used; the Gallery asks again instead. |
+| `privacyUrl` | The privacy page (`privacy.html`), linked from the sign-in card on Photos by me and from the Ready-to-share panel (under Google's button). Its words: [`text.privacy`](#textprivacy-privacy-page). |
 | `privacyContactsUrl` | Where the privacy page's "Contact the family" buttons go (`./#contacts` = the Contacts screen). |
 
 Pausing uploads without a redeploy: see `gallery_uploads` in
@@ -73,7 +75,7 @@ Pausing uploads without a redeploy: see `gallery_uploads` in
 | `whatsappUrl` | WhatsApp link pattern; `{number}` is replaced. |
 
 ## theme
-`colors.*` — page colours (any CSS colour). `goldText` and `joiner` (the "weds" between the names) should stay dark enough to read on the light background.
+`colors.*` — page colours (any CSS colour). `goldText` and `joiner` (the "weds" between the names) should stay dark enough to read on the light background. `success` is the green of the Gallery's "Using Google name ✓" line.
 `fonts.script` / `fonts.body` — font names; `fonts.url` — the Google Fonts stylesheet that loads them (build one at <https://fonts.google.com>).
 
 ## features
@@ -125,11 +127,14 @@ Placeholders in `{braces}` are filled in by the site; keep them.
 | `fullAction` | Button next to `fullNote`; opens Contacts |
 | `panelTitle` | Title of the panel that opens after choosing photos |
 | `panelMore` | Tile in that panel to choose more photos |
+| `panelCamera` | Tile next to it that opens the phone's camera; the photo taken joins the others |
 | `panelRemove` | Spoken label of the × on a chosen photo (screen readers) |
 | `nameLabel` / `nameOptional` | Label of the name box, and the "(optional)" after it |
 | `nameHint` | Small line under the name box; `{name}` = what they typed |
 | `uploadButton` | Button that sends the chosen photos |
-| `useGoogleName` | Link under the name box to use the Google name (only when sign-in is set up) |
+| `useGoogleName` | Link under the Upload button to use the Google name (only when sign-in is set up); tapped, Google's button shows there |
+| `usingGoogleName` | Green line in place of the name box once signed in: `{name}` = the Google name |
+| `notYou` | Small link under that line; signs this phone out (the name box comes back) |
 | `tooMany` | When more than `maxPhotosPerUpload` are chosen; `{max}` = that number |
 | `uploading` | Progress line: `{done}` of `{total}` |
 | `keepOpen` | Small line under the progress line |
@@ -140,7 +145,7 @@ Placeholders in `{braces}` are filled in by the site; keep them.
 | `byGuest` | Under each grid photo that has no name, e.g. `By a guest` |
 | `today` / `yesterday` | Photo time on those days: `{time}` |
 | `dayTime` | Photo time on other days: `{date}`, `{time}` |
-| `loading` | While the first photos are on their way |
+| `loading` | Spoken label of the three moving bars shown while the first photos are on their way |
 | `counter` | In the photo viewer: `{n}` of `{total}` |
 | `heartLabel` | Spoken label of the heart button |
 | `close` / `prev` / `next` | Spoken labels of the viewer's ×, ‹ and › buttons |
@@ -148,7 +153,8 @@ Placeholders in `{braces}` are filled in by the site; keep them.
 | `confirmTitle` / `confirmRemove` / `confirmKeep` | The "remove this photo?" question and its two buttons |
 | `otherPhoneTitle` | Heading above Google's sign-in button at the end of Photos by me |
 | `signInNote` | Small line under that button |
-| `privacyLink` | Small link to the privacy page (sign-in card, signed in or out, and next to `useGoogleName` in the panel) |
+| `privacyLine` | Tiny last line with the privacy link: on the sign-in card (signed in or out), and in the panel under Google's button. `{link}` = where `privacyLink` goes |
+| `privacyLink` | The privacy link's words, e.g. `Privacy Policy` |
 | `signedInAs` | Shown after signing in: `{name}` = the Google name |
 | `signedInNoName` | The same, when the Google account has no name |
 | `signOut` | Sign-out button |
@@ -204,9 +210,9 @@ Deploy → Manage deployments → Edit → **New version**
 | `NAME_MAX_LENGTH` | `40` | Longest guest name kept; longer names are cut. |
 | `PAGE_SIZE_MAX` | `60` | Most photos in one list answer, whatever the site asks for. |
 | `RATE_LIMIT_PER_HOUR` | `100` | Most uploads accepted from one phone in one hour. |
-| `SETTINGS_CACHE_SECONDS` | `60` | How long the pause switch's value is remembered. |
-| `STORAGE_CACHE_SECONDS` | `60` | How long the Drive storage check is remembered, and how long a "Drive full" error keeps uploads stopped before Drive is asked again. |
-| `LIST_CACHE_SECONDS` | `10` | How long the photo, heart and phone lists are remembered between requests. |
+| `SETTINGS_CACHE_SECONDS` | `300` | How long the pause switch's value is remembered (the site itself hides Add photos as soon as it reads the Sheet). |
+| `STORAGE_CACHE_SECONDS` | `300` | How long the Drive storage check is remembered, and how long a "Drive full" error keeps uploads stopped before Drive is asked again. |
+| `LIST_CACHE_SECONDS` | `1200` | How long the photo, heart and phone lists are remembered between requests (so most requests don't wait for the spreadsheet). Uploads, hearts, deletes and sign-ins through the site still show at once; only edits typed by hand into the data spreadsheet wait for the next Drive sync. Keep it longer than `SYNC_MINUTES`: each sync reads the lists again. |
 | `CACHE_CHUNK_BYTES` | `90000` | Largest piece the remembered lists are cut into (Google's limit is 100 KB). Leave it. |
 | `SYNC_MINUTES` | `15` | How often photos trashed or restored in Drive leave / come back to the site. Only 1, 5, 10, 15 or 30 (anything else means 15). Lower = more of Google's daily timer allowance (about 90 minutes a day on a free account). Run `setup` again after changing it. |
 | `SYNC_MAX_SECONDS` | `240` | Longest the sync may spend listing the photos folder; if Drive is slower, nothing changes and the next run tries again. |

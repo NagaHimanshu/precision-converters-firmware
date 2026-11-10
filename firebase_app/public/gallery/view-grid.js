@@ -40,10 +40,13 @@
     // is made once and never reloaded.
     const signInSpot = h("div", { class: "g-signin-spot", "data-g": "signin-spot", hidden: "" });
     const signInBox = h("div", { class: "g-signin", "data-g": "signin" });
-    // Opens in a new tab, so uploads that are running keep going.
-    const privacyLine = () => h("p", { class: "g-privacy-line" },
-      h("a", { class: "g-privacy", "data-g": "privacy-link", href: G.privacyUrl, target: "_blank", rel: "noopener" },
-        text.privacyLink));
+    // The tiny last line of the card. Opens in a new tab, so uploads that are running keep going.
+    const privacyLine = () => {
+      const [before, after] = String(text.privacyLine).split("{link}");
+      return h("p", { class: "g-privacy-line" }, before || "",
+        h("a", { class: "g-privacy", "data-g": "privacy-link", href: G.privacyUrl, target: "_blank", rel: "noopener" },
+          text.privacyLink), after || "");
+    };
     const signedOutCard = h("div", { class: "g-signin-card", "data-g": "signin-card" },
       h("p", { class: "g-signin-title" }, text.otherPhoneTitle), signInBox,
       h("p", { class: "g-signin-note" }, text.signInNote), privacyLine());
@@ -339,7 +342,7 @@
           : state.status === "error"
             ? card(offline ? text.offlineTitle : text.errorTitle, offline ? text.offlineBody : text.errorBody, tryAgain())
             : ready ? card(text.emptyTitle, state.tab === "mine" ? text.mineEmpty : text.emptyBody)
-            : h("p", { class: "message", "data-g": "loading" }, text.loading));
+            : W.loadingBars(h, text.loading));
 
       const seen = new Set();
       const nodes = state.photos.map((p, i) => {
@@ -376,6 +379,13 @@
 
     return { render, reveal, retryThumbs };
   }
+
+  // Three small bars rising and falling in turn (styles.css), read aloud as `label`. app.js
+  // draws the same while the gallery files load, so the two follow on without a jump.
+  W.loadingBars = function (h, label) {
+    return h("div", { class: "loading-bars", "data-g": "loading", role: "status", "aria-label": label },
+      h("span", { "aria-hidden": "true" }), h("span", { "aria-hidden": "true" }), h("span", { "aria-hidden": "true" }));
+  };
 
   W.viewGrid = { create };
 })();

@@ -266,17 +266,31 @@ and Google Photos). A shared photo is roughly 1–2 MB, so 1 GB holds about 500�
      `/d/` and `/view` is its ID.
   3. Open the **Wedding gallery data (private)** spreadsheet → **Photos** tab → Ctrl+F →
      paste the ID. In that row change `deleted` from `TRUE` to `FALSE`.
-  It shows again within a minute.
+  It shows again within `SYNC_MINUTES` (15 minutes): edits typed into the data
+  spreadsheet are picked up by the next Drive sync.
 
 ### The Drive sync
 
 Every `SYNC_MINUTES` the timer compares the gallery with the photos folder: photos
 trashed or deleted in Drive disappear from the site, and photos restored from the trash
-come back. A photo deleted through the site stays deleted (see above).
+come back. A photo deleted through the site stays deleted (see above). Each run then
+reads the photo, heart and phone lists again and remembers them, so guests' requests
+rarely wait for the spreadsheet (that's what makes the Gallery open quickly).
 
 Lowering `SYNC_MINUTES` (allowed: 1, 5, 10, 15, 30) makes this quicker but uses more of
 Google's daily time allowance for timers (about 90 minutes a day on a free account,
 shared by all your scripts). 15 is a good balance; don't go below 5.
+
+### Who signed in with Google
+
+Open the **Wedding gallery data (private)** spreadsheet → **Devices** tab. Each phone
+that signed in has a row with the Google `name` (column C) and `linkedAt` (column D: when,
+as a number; in a spare cell `=D2/86400000+DATE(1970,1,1)+TIME(5,30,0)` shows it as an
+Indian date and time). Email addresses are never kept, and Firebase / Google Cloud don't
+list guests. A phone that signed out has `name` and `accountHash` blank again.
+
+Guests sign out at the end of **Photos by me** (Sign out), or with **Not you? Sign out**
+under the green "Using Google name ✓" line in the Ready-to-share panel.
 
 ### Seeing what the script did
 

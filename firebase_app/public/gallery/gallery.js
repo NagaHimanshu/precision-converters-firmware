@@ -28,7 +28,8 @@
     });
     const identity = W.identity.create({ storageGet: ctx.storageGet, storageSet: ctx.storageSet,
       api, getStore: () => store });
-    const store = W.store.create({ api, identity, cfg: G, storageGet: ctx.storageGet, storageSet: ctx.storageSet });
+    const store = W.store.create({ api, identity, cfg: G, storageGet: ctx.storageGet, storageSet: ctx.storageSet,
+      takeEarly: ctx.takeEarlyList });
     const signIn = G.googleClientId ? googleSignIn() : null;
 
     // Not tied to the screen: uploads keep going while the guest is elsewhere in the site.

@@ -23,6 +23,8 @@ const PROP_DATA_SHEET = "DATA_SHEET_ID"; // private data spreadsheet made by set
 const PROP_LAST_WARN = "lastWarnDate";   // day the "storage nearly full" email was last sent
 // Cache keys.
 const ROWS_KEY = "rows:";                // + tab: "rows:{tab}:n" (head), "rows:{tab}:{i}" (parts)
+const GEN_KEY = "gen:";                  // + tab: changes on every write to that tab (see readRows)
+const WARM_TABS = ["Photos", "Hearts", "Devices"];   // the lists every request reads
 const UPLOADS_OPEN_KEY = "settings:uploadsOpen";
 const STORAGE_KEY = "storage:numbers";   // JSON { used, limit } in bytes
 // What Drive's "storage full" error is remembered as: 100% used.
@@ -459,16 +461,28 @@ function dataTab(name) {
 
 // All rows of a tab as objects (see SHEET_TABS), from the cache when it has them.
 // fresh = read the sheet itself (under the lock, before a change).
-// A read that overlaps a write may put the old rows back in the cache; they last at most
-// LIST_CACHE_SECONDS, and writes always read fresh, so no data is lost.
+// Each tab has a generation in the cache that every write changes (after flushing it).
+// The generation is looked up before the sheet is read and the rows are remembered under
+// it, and remembered rows are only used while it is still the tab's generation. So a read
+// that overlaps a write never brings the old rows back, however long they are kept.
 function readRows(name, fresh) {
+  const gen = rowsGen(name);
   if (!fresh) {
-    const hit = cacheGetJson(ROWS_KEY + name);
+    const hit = cacheGetJson(ROWS_KEY + name, gen);
     if (hit) return hit;
   }
   const rows = rowObjects(dataTab(name).getDataRange().getValues(), SHEET_TABS[name]);
-  cachePutJson(ROWS_KEY + name, rows, CONFIG.LIST_CACHE_SECONDS);
+  cachePutJson(ROWS_KEY + name, rows, CONFIG.LIST_CACHE_SECONDS, gen);
   return rows;
+}
+
+// The tab's current generation (a new one if the cache has none).
+function rowsGen(name) {
+  const hit = cacheGet(GEN_KEY + name);
+  if (hit) return hit;
+  const gen = Utilities.getUuid();
+  cachePut(GEN_KEY + name, gen, CACHE_MAX_SECONDS);
+  return gen;
 }
 
 // Writes: only inside withLock(), which clears the cache of changed tabs afterwards.
@@ -496,6 +510,7 @@ function setDeleted(rowNumber, mark) {
 }
 
 function invalidate(name) {
+  cachePut(GEN_KEY + name, Utilities.getUuid(), CACHE_MAX_SECONDS);   // rows read before this write: never used
   cacheRemove(ROWS_KEY + name + ":n");   // without its head, the parts are never used
 }
 
@@ -551,12 +566,13 @@ function cacheRemove(key) {
   }
 }
 
-// A value too big for one cache entry, stored as parts of at most CACHE_CHUNK_BYTES.
-function cachePutJson(key, value, seconds) {
+// A value too big for one cache entry, stored as parts of at most CACHE_CHUNK_BYTES,
+// stamped with generation `gen` (see readRows).
+function cachePutJson(key, value, seconds, gen) {
   const ttl = cacheTtl(seconds);
   if (ttl < 1) return;
   try {
-    const cut = toCacheParts(asciiJson(value), CONFIG.CACHE_CHUNK_BYTES, Utilities.getUuid());
+    const cut = toCacheParts(asciiJson(value), CONFIG.CACHE_CHUNK_BYTES, genStamp(gen, Utilities.getUuid()));
     const parts = {};
     cut.parts.forEach((p, i) => { parts[key + ":" + i] = p; });
     const cache = CacheService.getScriptCache();
@@ -567,10 +583,12 @@ function cachePutJson(key, value, seconds) {
   }
 }
 
-function cacheGetJson(key) {
+// The value, or null when missing, broken, or written in another generation than `gen`.
+function cacheGetJson(key, gen) {
   try {
     const cache = CacheService.getScriptCache();
     const head = cache.get(key + ":n");
+    if (!headInGen(head, gen)) return null;
     const n = cachePartCount(head);
     if (!n) return null;
     const keys = [];
@@ -586,7 +604,35 @@ function cacheGetJson(key) {
 
 /* ---------- time trigger ---------- */
 
-// Run by the time trigger every SYNC_MINUTES: photos deleted or trashed directly in Drive
+// Run by the time trigger every SYNC_MINUTES: the Drive sync (syncNow), then the lists
+// guests' requests read are read again and remembered (warmCache), so those requests
+// rarely have to wait for the spreadsheet. Never throws.
+function syncDeletions() {
+  syncNow();
+  warmCache();
+}
+
+// The photo, heart and device lists read fresh and remembered for LIST_CACHE_SECONDS, and
+// the pause switch and Drive storage looked up if they aren't remembered. Problems are
+// only logged: guests' requests then just read the sheet themselves.
+function warmCache() {
+  try {
+    if (missingSetup()) return;
+    WARM_TABS.forEach((name) => {
+      try {
+        readRows(name, true);
+      } catch (err) {
+        console.warn("Gallery cache warm-up skipped " + name + ":", String(err));
+      }
+    });
+    uploadsOpen();
+    storageNow();
+  } catch (err) {
+    console.warn("Gallery cache warm-up failed:", String(err));
+  }
+}
+
+// Photos deleted or trashed directly in Drive
 // leave the gallery (their rows are marked SYNC_HIDDEN), and come back if their file is
 // back (restored from the trash). This also tidies a photo whose file was trashed but
 // whose row could not be written. Emptying the whole folder (clearing test photos before
@@ -594,7 +640,7 @@ function cacheGetJson(key) {
 // takes longer than SYNC_MAX_SECONDS is never used, and anything the sync hides it undoes
 // on a later run once the files are listed again. Photos deleted in the app (or set TRUE
 // in the sheet) stay deleted. Never throws: problems are only logged (Executions in the editor).
-function syncDeletions() {
+function syncNow() {
   try {
     const missing = missingSetup();
     if (missing) {

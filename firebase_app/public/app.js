@@ -575,8 +575,12 @@
     $("gallery-body").replaceChildren(h("div", { class: "coming-soon" }, icon("gallery"), ...kids));
   }
 
+  // Three small bars rising and falling in turn (styles.css); the Gallery shows the same
+  // while its first photos are on their way (gallery/view-grid.js), so there is no jump.
   function showGalleryLoading() {
-    $("gallery-body").replaceChildren(h("p", { class: "message", "data-g": "state" }, T.status.loading));
+    const bar = () => h("span", { "aria-hidden": "true" });
+    $("gallery-body").replaceChildren(h("div", { class: "loading-bars", "data-g": "state", role: "status",
+      "aria-label": T.gallery.loading }, bar(), bar(), bar()));
   }
 
   // A copy that failed after mounting stops its timer and listeners, so Try again
@@ -619,6 +623,7 @@
         uploadsOpen: uploadsOpen(),
         goContacts: () => { location.hash = "contacts"; },
         locale: CFG.locale,
+        takeEarlyList,
       });
       $("gallery-body").replaceChildren(box);
       galleryState = "ready";
@@ -628,6 +633,71 @@
       console.warn("Gallery failed:", err);
       showGalleryError();
     });
+  }
+
+  /* ---------- The Gallery's first photos, asked for early ---------- */
+
+  // A little after the site has opened (and only when the Gallery is on Home), the first
+  // page of photos is asked for quietly in the background, so it is often there before
+  // the Gallery is tapped. One request, no retries, nothing shown, any failure ignored:
+  // the Gallery then simply asks again itself. Its files are not loaded for this.
+  const GALLERY_DEVICE_KEY = "gallery-device";   // same key and format as gallery/identity.js
+  const GALLERY_DEVICE_PATTERN = /^[0-9a-f]{32}$/;
+  const GALLERY_DEVICE_BYTES = 16;
+  let earlyDue = false;     // the delay after opening has passed
+  let early = null;         // { device, at, answer, taken }: the one early request of this visit
+
+  // This phone's gallery code (made here if the Gallery hasn't made one yet).
+  function galleryDevice() {
+    const saved = storageGet(GALLERY_DEVICE_KEY);
+    if (GALLERY_DEVICE_PATTERN.test(saved || "")) return saved;
+    const bytes = new Uint8Array(GALLERY_DEVICE_BYTES);
+    self.crypto.getRandomValues(bytes);
+    const device = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+    storageSet(GALLERY_DEVICE_KEY, device);
+    return device;
+  }
+
+  function askEarly() {
+    const G = CFG.gallery;
+    if (!earlyDue || early || !G.endpoint || !(G.earlyListDelayMs > 0) || galleryState !== "idle") return;
+    if (!model || !isVisible("gallery") || currentRoute() === "gallery" || navigator.onLine === false) return;
+    try {
+      const device = galleryDevice();
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), G.requestTimeoutMs);
+      const answer = fetch(G.endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({ action: "list", device, limit: G.pageSize }),
+        signal: controller.signal,
+      }).then((res) => (res.ok ? res.json() : Promise.reject(new Error("HTTP " + res.status))))
+        .then((body) => (body && body.ok === true ? body : Promise.reject(new Error("not ok"))));
+      answer.then(() => clearTimeout(timer), () => clearTimeout(timer));
+      early = { device, at: Date.now(), answer, taken: false };
+    } catch (err) {
+      early = { taken: true };   // not asked; the Gallery asks itself
+    }
+  }
+
+  // The Gallery takes the early answer once (a Promise of the list answer), or null when
+  // there is none, it is too old, or it was asked for another phone code.
+  function takeEarlyList(device) {
+    const e = early;
+    if (!e || e.taken || e.device !== device || Date.now() - e.at > CFG.gallery.earlyListMaxAgeMs) return null;
+    e.taken = true;
+    return e.answer;
+  }
+
+  function scheduleEarly() {
+    const delay = CFG.gallery.earlyListDelayMs;
+    if (!CFG.gallery.endpoint || !(delay > 0)) return;
+    const later = () => setTimeout(() => {
+      earlyDue = true;
+      askEarly();   // the Sheet may not be in yet: renderAll() tries again when it is
+    }, delay);
+    if (document.readyState === "complete") later();
+    else window.addEventListener("load", later, { once: true });
   }
 
   function renderGallery() {
@@ -681,6 +751,7 @@
     renderVenues();
     renderGallery();
     renderContacts();
+    askEarly();
     // A section was just shown or hidden while its screen is the current one.
     const route = currentRoute();
     const view = [...document.querySelectorAll(".view")].find((v) => v.dataset.route === route);
@@ -830,6 +901,7 @@
     });
 
     setupInstallHint();
+    scheduleEarly();
 
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));

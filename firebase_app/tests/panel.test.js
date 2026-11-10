@@ -58,11 +58,13 @@
     var ctx = { cfg: cfg, text: C.text.gallery, h: h, icon: icon, fill: fill, locale: C.locale };
     var sent = [];
     var mounted = [];
+    var signOuts = [];
     var panel = G().viewPanel.create({ ctx: ctx, identity: identity,
-      signIn: { mountButton: function (el) { mounted.push(el); } },
+      signIn: { mountButton: function (el) { mounted.push(el); },
+        signOut: function () { signOuts.push(1); return over.signOut ? over.signOut(identity, panel) : Promise.resolve(); } },
       onUpload: function (files, name) { sent.push([files, name]); } });
     document.body.append(panel.el);
-    return { panel: panel, sent: sent, el: panel.el, identity: identity, mounted: mounted,
+    return { panel: panel, sent: sent, el: panel.el, identity: identity, mounted: mounted, signOuts: signOuts,
       q: function (s) { return panel.el.querySelector('[data-g="' + s + '"]'); },
       all: function (s) { return panel.el.querySelectorAll('[data-g="' + s + '"]'); },
       done: function () { panel.close(); panel.el.remove(); } };
@@ -140,24 +142,130 @@
     eq([withId, without], [true, false]);
   });
 
-  test("Privacy link next to the Google name link", function () {
+  test("Privacy Policy line only under Google's button, as the tiny last line", function () {
     var p = make({ gallery: { googleClientId: "abc" } });
     p.panel.open(files(1));
-    var link = function () {
-      var a = p.q("privacy-link");
-      return shown(a) ? [a.tagName, a.textContent, a.getAttribute("href"), a.getAttribute("target"), a.getAttribute("rel")] : null;
-    };
-    var before = link();
-    var row = shown(p.q("use-google")) && p.q("privacy-link") &&
-      Math.abs(p.q("use-google").getBoundingClientRect().top - p.q("privacy-link").getBoundingClientRect().top) < 2;
+    var before = p.q("privacy-link");
     p.q("use-google").click();
-    var after = link();
+    var a = p.q("privacy-link");
+    var got = shown(a) ? [a.tagName, a.textContent, a.getAttribute("href"), a.getAttribute("target"), a.getAttribute("rel")] : null;
+    var line = a && a.parentNode;
+    var lineText = line && line.textContent;
+    var last = line && line === line.parentNode.lastElementChild && line.parentNode === p.q("panel-upload").parentNode.lastElementChild;
+    var below = line && line.getBoundingClientRect().top >= p.q("signin").getBoundingClientRect().bottom - 1;
+    var small = line && parseFloat(getComputedStyle(line).fontSize) < parseFloat(getComputedStyle(p.q("panel-upload")).fontSize);
     p.done();
+    eq(before, null, "no Privacy link before Google's button is asked for");
     // A new tab: leaving the page would lose the photos just picked.
-    var want = ["A", T().privacyLink, self.SITE_CONFIG.gallery.privacyUrl, "_blank", "noopener"];
-    eq(before, want);
-    ok(row, "not on the same line as the Google name link");
-    eq(after, want, "kept once Google's button shows");
+    eq(got, ["A", T().privacyLink, self.SITE_CONFIG.gallery.privacyUrl, "_blank", "noopener"]);
+    eq(T().privacyLink, "Privacy Policy");
+    eq(lineText, fill(T().privacyLine, { link: T().privacyLink }));
+    ok(last, "not the panel's last line");
+    ok(below, "not under Google's button");
+    ok(small, "not in smaller letters");
+  });
+
+  test("camera tile next to More opens the camera", function () {
+    var p = make();
+    p.panel.open(files(1));
+    var tile = p.q("panel-camera");
+    var cam = p.q("camera-input");
+    var clicked = 0;
+    cam.click = function () { clicked++; };
+    var order = [].map.call(p.el.querySelector(".g-p-thumbs").children, function (el) { return el.dataset.g; });
+    tile.click();
+    var attrs = [cam.type, cam.getAttribute("accept"), cam.getAttribute("capture"), cam.hasAttribute("multiple")];
+    // The photo taken comes back into the same panel.
+    var dt = new DataTransfer();
+    dt.items.add(new File(["c"], "camera.jpg", { type: "image/jpeg" }));
+    cam.files = dt.files;
+    cam.dispatchEvent(new Event("change"));
+    var n = p.all("panel-thumb").length;
+    var open = shown(p.q("panel"));
+    var label = tile.textContent;
+    p.done();
+    eq(order, ["panel-thumb", "panel-more", "panel-camera"]);
+    eq(clicked, 1, "camera not opened");
+    eq(attrs, ["file", "image/*", "environment", false]);
+    eq([n, open], [2, true]);
+    ok(label.indexOf(T().panelCamera) >= 0, "Camera label missing");
+  });
+
+  test("camera tile goes at the limit, like More", function () {
+    var p = make({ gallery: { maxPhotosPerUpload: 2 } });
+    p.panel.open(files(1));
+    var before = [shown(p.q("panel-more")), shown(p.q("panel-camera"))];
+    p.panel.open(files(1));
+    var after = [shown(p.q("panel-more")), shown(p.q("panel-camera"))];
+    p.done();
+    eq(before, [true, true]);
+    eq(after, [false, false]);
+  });
+
+  test("signed in: green Using Google name line instead of the name box", function () {
+    var root = document.documentElement.style;
+    root.setProperty("--success", self.SITE_CONFIG.theme.colors.success);   // as app.js does from the theme
+    var p = make({ gallery: { googleClientId: "abc" }, account: { name: "Asha G" }, name: "Asha" });
+    p.panel.open(files(1));
+    var line = p.q("using-google");
+    var text = line && line.querySelector(".g-p-using-name").textContent;
+    var color = line && getComputedStyle(line.querySelector(".g-p-using-name")).color;
+    var probe = document.createElement("span");
+    probe.style.color = self.SITE_CONFIG.theme.colors.success;
+    document.body.append(probe);
+    var green = getComputedStyle(probe).color;
+    probe.remove();
+    root.removeProperty("--success");
+    var state = [shown(line), shown(p.q("name")), shown(p.q("not-you")), shown(p.q("use-google"))];
+    p.done();
+    eq(text, fill(T().usingGoogleName, { name: "Asha G" }));
+    ok(text.indexOf("\u2713") >= 0, "no tick");
+    eq(state, [true, false, true, false]);
+    eq(color, green, "not in the success colour");
+  });
+
+  test("Not you? signs out; the name box comes back with the last name", function () {
+    var p = make({ gallery: { googleClientId: "abc" }, account: { name: "Asha G" }, name: "Asha",
+      signOut: function (identity, panel) {
+        identity.setAccount(null);
+        panel.syncAccount();
+        return Promise.resolve();
+      } });
+    p.panel.open(files(1));
+    p.q("not-you").click();
+    // Checked by hidden, not by what is on screen: an earlier test's Back may close the panel meanwhile.
+    var off = function (g) { return p.q(g).closest(".g-sheet [hidden]") !== null; };
+    return Promise.resolve().then(function () {
+      var state = [!off("using-google"), !off("name"), p.q("name").value, !off("use-google")];
+      var outs = p.signOuts.length;
+      p.done();
+      eq(outs, 1);
+      eq(state, [false, true, "Asha", true]);
+    });
+  });
+
+  test("Not you? that fails says so and stays signed in", function () {
+    var p = make({ gallery: { googleClientId: "abc" }, account: { name: "Asha G" },
+      signOut: function () { return Promise.reject(new Error("offline")); } });
+    var warn = console.warn;
+    console.warn = function () {};
+    p.panel.open(files(1));
+    p.q("not-you").click();
+    var off = function (g) { return p.q(g).closest(".g-sheet [hidden]") !== null; };
+    return waitFor(function () { return !off("panel-signout-failed") && !p.q("not-you").disabled; }, "failure line").then(function () {
+      console.warn = warn;
+      var state = [!off("using-google"), !off("name"), p.q("panel-signout-failed").textContent, p.q("not-you").disabled];
+      p.done();
+      eq(state, [true, false, T().signOutFailed, false]);
+    }, function (e) { console.warn = warn; p.done(); throw e; });
+  });
+
+  test("no sign-in: no green line or Not you", function () {
+    var p = make({ gallery: { googleClientId: "" }, account: { name: "Asha G" } });
+    p.panel.open(files(1));
+    var state = [!!p.q("not-you"), shown(p.q("using-google"))];
+    p.done();
+    eq(state, [false, true], "the name in use is still said; there is just nothing to sign out with");
   });
 
   test("picked photos past the limit are noted", function () {

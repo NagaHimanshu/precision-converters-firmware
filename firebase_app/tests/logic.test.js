@@ -274,6 +274,17 @@
     eq(fromCacheParts(empty.head, empty.parts), "[]");
   });
 
+  test("cache generations", function () {
+    const head = toCacheParts("[]", 100, genStamp("g1", "u1")).head;
+    eq(headInGen(head, "g1"), true);
+    eq(headInGen(head, "g2"), false, "another generation");
+    eq(headInGen(toCacheParts("[]", 100, genStamp("g10", "u")).head, "g1"), false, "g1 is not g10");
+    eq(headInGen(head, ""), false);
+    eq(headInGen(head, null), false);
+    eq(headInGen(null, "g1"), false);
+    eq(fromCacheParts(head, toCacheParts("[]", 100, genStamp("g1", "u1")).parts), "[]", "parts still read back");
+  });
+
   test("apps-script files are plain ASCII", async function () {
     // Copy-paste into the Apps Script editor must not change any character.
     for (const f of ["Config.gs", "Logic.gs", "Code.gs"]) {
@@ -331,7 +342,8 @@
   async function codeWith(env) {
     const text = await codeSource();
     const make = new Function(...GOOGLE, text +
-      "\n;return { doPost: doPost, doGet: doGet, setup: setup, syncDeletions: syncDeletions, hash: hash };");
+      "\n;return { doPost: doPost, doGet: doGet, setup: setup, syncDeletions: syncDeletions, hash: hash," +
+      " inside: { readRows: readRows, rowsGen: rowsGen, cachePutJson: cachePutJson } };");
     return make(...GOOGLE.map((n) => env[n]));
   }
 
@@ -649,7 +661,8 @@
     const logicFns = ["cleanName", "parseRequest", "pageOf", "buildPhotos", "applyHeart", "canDelete",
       "storageState", "uploadsOpenFrom", "isJpeg", "checkTokenInfo", "countRecent", "fail",
       "rowObjects", "rowValues", "cellText", "asciiJson", "toCacheParts", "fromCacheParts", "cachePartCount",
-      "triggerMinutes", "driveErrorCode", "photoFileName", "fillText", "driveNotFound", "syncChanges", "folderIdFrom"];
+      "triggerMinutes", "driveErrorCode", "photoFileName", "fillText", "driveNotFound", "syncChanges", "folderIdFrom",
+      "genStamp", "headInGen"];
     const before = logicFns.map((n) => self[n]);
     ok(before.every((f) => typeof f === "function"), "Logic.gs functions are global");
     let scriptError = null;
@@ -881,6 +894,46 @@
     } finally {
       CONFIG.CACHE_CHUNK_BYTES = saved;
     }
+  });
+
+  test("code.gs a list read during a change never brings the old rows back", async function () {
+    const env = fakeGoogle({ photos: seedPhotos(2, "h") });
+    const t = (await codeWith(env)).inside;
+    // A slow list: it looks up the generation, then reads the sheet, before the heart lands...
+    const gen = t.rowsGen("Hearts");
+    const old = t.readRows("Hearts", true);
+    eq((await post(env, { action: "heart", device: DEV_A, id: "p000", on: true })).body.hearts, 1);
+    // ...and only then remembers what it read.
+    t.cachePutJson("rows:Hearts", old, CONFIG.LIST_CACHE_SECONDS, gen);
+    const p = (await post(env, { action: "list", device: DEV_A, limit: 30 })).body.photos[0];
+    eq([p.id, p.hearts, p.hearted], ["p000", 1, true], "the heart is not lost");
+  });
+
+  test("code.gs lists are remembered for LIST_CACHE_SECONDS, longer than the sync", async function () {
+    ok(CONFIG.LIST_CACHE_SECONDS > CONFIG.SYNC_MINUTES * 60, "a sync refreshes them before they run out");
+    ok(CONFIG.LIST_CACHE_SECONDS <= 21600, "within CacheService's limit");
+    const env = fakeGoogle({ photos: seedPhotos(2, "h") });
+    const sheet = env.state.spreadsheets.data1.getSheetByName("Photos");
+    await post(env, { action: "list", device: DEV_A, limit: 30 });
+    await post(env, { action: "list", device: DEV_B, limit: 30 });
+    eq(sheet.reads, 1, "second guest served from the cache");
+  });
+
+  test("code.gs syncDeletions remembers the lists guests read", async function () {
+    const d = await deleteEnv(["keep", "also"]);
+    d.env.state.cache.clear();
+    (await codeWith(d.env)).syncDeletions();
+    const tabs = ["Photos", "Hearts", "Devices"].map((n) => d.env.state.spreadsheets.data1.getSheetByName(n));
+    const before = tabs.map((t) => t.reads);
+    ok(before.every((n) => n >= 1), "each list read by the sync: " + before);
+    const list = (await post(d.env, { action: "list", device: DEV_A, limit: 30 })).body;
+    eq(list.photos.map((p) => p.id).sort(), ["also", "keep"]);
+    eq(tabs.map((t) => t.reads), before, "the guest's list didn't wait for the sheet");
+    // A sync whose Drive listing fails still warms the cache.
+    d.env.state.cache.clear();
+    d.env.DriveApp.getFolderById = () => { throw new Error("Drive hiccup"); };
+    (await codeWith(d.env)).syncDeletions();
+    ok(d.env.state.cache.has("rows:Photos:n"), "warmed after a failed sync");
   });
 
   test("code.gs setup twice is safe", async function () {

@@ -68,7 +68,9 @@ toolbar to see it at phone size.
 | `slowupload` / `flaky` / `ratelimit` | uploads slow / every second one fails / all refused as too many |
 
 Other switches (add with `&`): `fresh=1` (first visit, nothing saved on the phone),
-`sheet=paused` (Sheet has `gallery_uploads` = `no`), `noclient=1` (no Google sign-in),
+`sheet=paused` (Sheet has `gallery_uploads` = `no`), `sheet=hidden` (`show_gallery` = `no`),
+`early=<ms>` (ask for the Gallery's first photos this long after opening; `0` = never),
+`noclient=1` (no Google sign-in),
 `gis=broken` (Google's sign-in script fails), `break=load` / `break=mount` / `break=show` /
 `break=once&k=any` (gallery files missing / failing; see `tools/dev_server.py`). Other `mock=` names act like `ok` with
 their own album (useful for trying things without touching the `ok` one).

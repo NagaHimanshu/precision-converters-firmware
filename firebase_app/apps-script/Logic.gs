@@ -302,6 +302,17 @@ function toCacheParts(text, size, stamp) {
 
 const CACHE_HEAD = /^(.*):(\d+)$/;
 
+// The stamp of a list remembered while its tab is in generation `gen` (see readRows in
+// Code.gs): a list is only used while its tab is still in the generation it was read in.
+function genStamp(gen, id) {
+  return String(gen) + "." + String(id);
+}
+
+// Whether a cache head was written in generation `gen`.
+function headInGen(head, gen) {
+  return typeof head === "string" && typeof gen === "string" && gen !== "" && head.indexOf(gen + ".") === 0;
+}
+
 // How many parts a cache head says there are (0 = not a head).
 function cachePartCount(head) {
   const m = CACHE_HEAD.exec(typeof head === "string" ? head : "");
