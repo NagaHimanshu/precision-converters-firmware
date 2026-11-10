@@ -227,6 +227,104 @@
     ok(count.indexOf("4") >= 0, "count updated");
   });
 
+  /* ---------- caption row under each photo: "By name" and the heart ---------- */
+
+  function caption(tile) { return tile.querySelector('[data-g="caption"]'); }
+
+  test("caption shows By and the name in bold, heart below the photo", function () {
+    var store = fakeStore({ photos: [photo("a", { by: "Asha", hearts: 2 })], total: 1 });
+    var g = makeGrid(store);
+    var tile = g.root.querySelector('[data-g="tile"]');
+    var cap = caption(tile);
+    var by = cap && cap.querySelector('[data-g="by"]');
+    var bold = by && by.querySelector("b");
+    var heart = tile.querySelector('[data-g="heart"]');
+    var inCaption = !!cap && cap.contains(heart);
+    var onPhoto = tile.querySelector(".g-open").contains(heart) || tile.querySelector(".g-shot").contains(heart);
+    var below = heart.getBoundingClientRect().top >= tile.querySelector("img").getBoundingClientRect().bottom - 0.5;
+    var byWeight = by && getComputedStyle(by).fontWeight;
+    var boldWeight = bold && getComputedStyle(bold).fontWeight;
+    var size = by && parseFloat(getComputedStyle(by).fontSize);
+    g.root.remove();
+    ok(by, "caption line missing");
+    eq(by.textContent, T().byPrefix + " Asha");
+    eq(bold && bold.textContent, "Asha", "name in bold");
+    ok(Number(byWeight) < 600 && Number(boldWeight) >= 700, "By normal, name bold: " + byWeight + " / " + boldWeight);
+    ok(size >= 16, "caption text size " + size);
+    ok(inCaption, "heart not in the caption row");
+    ok(!onPhoto && below, "heart still on the photo");
+  });
+
+  test("caption without a name says By a guest", function () {
+    var store = fakeStore({ photos: [photo("a", { by: "" }), photo("b", { by: "   " }), photo("c", { by: null })], total: 3 });
+    var g = makeGrid(store);
+    var lines = [].map.call(g.root.querySelectorAll('[data-g="tile"]'), function (t) {
+      var by = caption(t).querySelector('[data-g="by"]');
+      return [by.textContent, !!by.querySelector("b")];
+    });
+    g.root.remove();
+    eq(lines, [[T().byGuest, false], [T().byGuest, false], [T().byGuest, false]]);
+  });
+
+  test("markup in a name shows as text in the caption", function () {
+    var name = "<img src=x onerror=alert(1)>";
+    var store = fakeStore({ photos: [photo("a", { by: name })], total: 1 });
+    var g = makeGrid(store);
+    var by = caption(g.root.querySelector('[data-g="tile"]')).querySelector('[data-g="by"]');
+    var made = by.querySelector("img");
+    var text = by.querySelector("b").textContent;
+    g.root.remove();
+    ok(!made && !document.querySelector('img[src="x"]'), "markup became an element");
+    eq(text, name);
+  });
+
+  test("caption heart toggles and does not open the photo", function () {
+    var store = fakeStore({ tab: "mine", photos: [photo("a", { mine: true, hearts: 1, hearted: true })], total: 1 });
+    var opened = [];
+    var g = makeGrid(store, { onOpen: function (i) { opened.push(i); }, onDelete: function () {} });
+    var tile = g.root.querySelector('[data-g="tile"]');
+    var heart = caption(tile).querySelector('[data-g="heart"]');
+    var rect = heart.getBoundingClientRect();
+    var label = heart.getAttribute("aria-label");
+    heart.click();
+    g.view.render(Object.assign({}, store.state, { photos: [photo("a", { mine: true, hearts: 0, hearted: false })] }));
+    var after = [heart.getAttribute("aria-pressed"), heart.textContent.indexOf("0") >= 0];
+    var del = tile.querySelector('[data-g="tile-delete"]');
+    var delOnPhoto = !!del && tile.querySelector(".g-shot").contains(del);
+    g.root.remove();
+    eq(store.calls, [["toggleHeart", "a"]]);
+    eq(opened, [], "heart tap opened the viewer");
+    eq(label, T().heartLabel);
+    ok(rect.width >= 44 && rect.height >= 44, "tap target " + rect.width + "x" + rect.height);
+    eq(after, ["false", true]);
+    ok(delOnPhoto, "Delete not on the photo in Photos by me");
+  });
+
+  test("long names end in an ellipsis and every tile is the same height", function () {
+    var long = "Venkata Lakshmi Narasimha Subrahmanyam Garu";
+    var up = fakeUploader([{ key: "k1", status: "uploading", progress: 0.3 }, { key: "k2", status: "failed", code: "unavailable" }],
+      { finished: 0, total: 2, dropped: 0 });
+    var store = fakeStore({ photos: [photo("a", { by: long }), photo("b", { by: "Asha" }), photo("c"), photo("no-such-photo")], total: 4 });
+    var g = makeGrid(store, { uploader: up });
+    var by = caption(g.root.querySelector('[data-id="a"]')).querySelector('[data-g="by"]');
+    var cs = getComputedStyle(by);
+    var style = [cs.textOverflow, cs.whiteSpace, cs.overflow];
+    var cut = by.scrollWidth > by.clientWidth;
+    var oneLine = by.getClientRects().length === 1 && by.getBoundingClientRect().height < 2 * parseFloat(cs.fontSize) * 1.2;
+    var grid = g.root.querySelector('[data-g="grid"]');
+    var waitBroken = function () { return g.root.querySelector('[data-id="no-such-photo"]').classList.contains("is-broken"); };
+    return waitFor(waitBroken, "broken tile").then(function () {
+      var heights = [].map.call(grid.children, function (el) { return Math.round(el.getBoundingClientRect().height); });
+      var kinds = [].map.call(grid.children, function (el) { return el.dataset.g; });
+      g.root.remove();
+      eq(style, ["ellipsis", "nowrap", "hidden"]);
+      ok(cut, "long name not cut");
+      ok(oneLine, "long name wrapped");
+      eq(kinds, ["uploading-tile", "failed-tile", "tile", "tile", "tile", "tile"]);
+      ok(heights.every(function (x) { return x === heights[0]; }), "tile heights " + heights);
+    }, function (e) { g.root.remove(); throw e; });
+  });
+
   test("broken thumbnail becomes a soft placeholder", function () {
     var store = fakeStore({ photos: [photo("no-such-photo")], total: 1 });
     var g = makeGrid(store);
@@ -708,6 +806,24 @@
       eq(said, T().signOutFailed);
       eq([still, usable], [true, true]);
     });
+  });
+
+  test("sign-in card has a Privacy link, signed out and signed in", function () {
+    var s = signInGrid({ tab: "mine", photos: [], total: 0 });
+    var link = function () {
+      var card = [].filter.call(s.g.root.querySelectorAll('[data-g="signin-card"]'), shown)[0];
+      var a = card && card.querySelector('a[data-g="privacy-link"]');
+      return a && shown(a) ? [a.textContent, a.getAttribute("href"), a.getAttribute("target"), a.getAttribute("rel")] : null;
+    };
+    var out = link();
+    s.store.state = Object.assign({}, s.store.state, { account: { name: "Ravi" } });
+    s.g.view.render(s.store.state);
+    var inn = link();
+    s.g.root.remove();
+    // A new tab: leaving the page would stop running uploads.
+    var want = [T().privacyLink, self.SITE_CONFIG.gallery.privacyUrl, "_blank", "noopener"];
+    eq(out, want, "signed out");
+    eq(inn, want, "signed in");
   });
 
   test("signed in without a name", function () {

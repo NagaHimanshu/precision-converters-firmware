@@ -102,6 +102,8 @@ self.SITE_CONFIG = {
     previewSizePx: 320,            // small copy shown while choosing and uploading (longest side)
     progressTickMs: 500,           // how often the upload rings are redrawn
     progressEstimateMs: 8000,      // rough time to send one photo; the ring fills on this time scale
+    privacyUrl: "privacy.html",    // the privacy page (linked from the sign-in card and the Ready-to-share panel)
+    privacyContactsUrl: "./#contacts",  // where the privacy page's "Contact the family" goes
   },
 
   /* ---------- Locale ---------- */
@@ -236,7 +238,9 @@ self.SITE_CONFIG = {
       keepOpen: "Keep this page open until uploads finish",
       uploadFailed: "Couldn't upload — tap to try again",
       unsupported: "This photo can't be shared",
-      by: "By {name}",
+      by: "By {name}",              // full-screen viewer
+      byPrefix: "By",               // under each grid photo: "By" + the name in bold
+      byGuest: "By a guest",        // under each grid photo with no name
       today: "Today, {time}",
       yesterday: "Yesterday, {time}",
       dayTime: "{date}, {time}",    // photo time on other days, e.g. "11 December, 8:42 pm"
@@ -256,6 +260,7 @@ self.SITE_CONFIG = {
       signOutFailed: "Couldn't sign out — please try again.",
       signOut: "Sign out",
       signInNote: "Your name will appear on photos you share.",
+      privacyLink: "Privacy",       // small link to the privacy page
       signInUnavailable: "Sign-in isn't available here. You can still add photos.",
       errors: {
         offline: "You seem to be offline. Please check your internet and try again.",
@@ -269,6 +274,55 @@ self.SITE_CONFIG = {
         rate_limited: "That's a lot of photos at once. Please wait a moment and try again.",
         signin_failed: "Sign-in didn't work. You can still add photos without it.",
       },
+    },
+
+    // The privacy page (privacy.html). Plain text only; each section is a heading and
+    // short paragraphs; contact: true adds a "Contact the family" button under it.
+    privacy: {
+      title: "Privacy",
+      intro: "A few plain words about the photos shared on this site.",
+      contactLink: "Contact the family",
+      sections: [
+        {
+          heading: "What we keep",
+          paragraphs: [
+            "The photos guests share. Each photo is made smaller on your phone before it is sent, and the location saved in it is removed.",
+            "The name you type, if you type one, the Google name if you sign in with Google, and the hearts photos get.",
+          ],
+        },
+        {
+          heading: "What we never keep",
+          paragraphs: [
+            "Google email addresses. Signing in with Google is only used for your name and to recognise your photos in \"Photos by me\".",
+          ],
+        },
+        {
+          heading: "Your phone's code",
+          paragraphs: [
+            "Each phone gets a random code, kept on the phone. It is only used to show \"Photos by me\" and to let you delete your own photos.",
+          ],
+        },
+        {
+          heading: "Where photos are kept",
+          paragraphs: [
+            "In the couple's Google Drive and Google Sheets. Anyone with the link to this site can see the shared photos.",
+          ],
+        },
+        {
+          heading: "Removing a photo",
+          paragraphs: [
+            "Delete it yourself in \"Photos by me\", or contact the family and we will remove it.",
+          ],
+          contact: true,
+        },
+        {
+          heading: "Questions?",
+          paragraphs: [
+            "Please contact the family. We're happy to help.",
+          ],
+          contact: true,
+        },
+      ],
     },
 
     contacts: {

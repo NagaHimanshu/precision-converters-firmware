@@ -140,6 +140,26 @@
     eq([withId, without], [true, false]);
   });
 
+  test("Privacy link next to the Google name link", function () {
+    var p = make({ gallery: { googleClientId: "abc" } });
+    p.panel.open(files(1));
+    var link = function () {
+      var a = p.q("privacy-link");
+      return shown(a) ? [a.tagName, a.textContent, a.getAttribute("href"), a.getAttribute("target"), a.getAttribute("rel")] : null;
+    };
+    var before = link();
+    var row = shown(p.q("use-google")) && p.q("privacy-link") &&
+      Math.abs(p.q("use-google").getBoundingClientRect().top - p.q("privacy-link").getBoundingClientRect().top) < 2;
+    p.q("use-google").click();
+    var after = link();
+    p.done();
+    // A new tab: leaving the page would lose the photos just picked.
+    var want = ["A", T().privacyLink, self.SITE_CONFIG.gallery.privacyUrl, "_blank", "noopener"];
+    eq(before, want);
+    ok(row, "not on the same line as the Google name link");
+    eq(after, want, "kept once Google's button shows");
+  });
+
   test("picked photos past the limit are noted", function () {
     var p = make({ gallery: { maxPhotosPerUpload: 2 } });
     p.panel.open(files(3));

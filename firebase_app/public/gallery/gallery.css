@@ -56,14 +56,20 @@
   gap: 6px;
 }
 
+/* A tile: the square photo, then one caption row ("By name" and the heart). */
 .g-tile {
+  position: relative;
+  min-width: 0;                  /* a long name is cut, it doesn't widen the column */
+}
+
+.g-shot {
   position: relative;
   border-radius: 12px;
   overflow: hidden;
   background: var(--blush);     /* shows while the picture loads, and as the soft placeholder */
 }
 
-.g-tile::before {                /* square tile on every browser */
+.g-shot::before {                /* square photo on every browser */
   content: "";
   display: block;
   padding-top: 100%;
@@ -105,17 +111,37 @@
   opacity: 0.7;
 }
 
+/* Every caption row is the same height (the heart's tap target), so the rows line up. */
+.g-cap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 48px;
+  padding-left: 4px;
+}
+
+.g-by {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--ink-soft);
+  font-size: 16px;
+  line-height: 1.3;
+}
+
+.g-by b { color: var(--ink); font-weight: 700; }
+
 /* The pill is small; the button around it is a full-size tap target. */
 .g-heart {
-  position: absolute;
-  right: 0;
-  bottom: 0;
   display: flex;
-  align-items: flex-end;
+  flex: none;
+  align-items: center;
   justify-content: flex-end;
   min-width: 48px;
   min-height: 48px;
-  padding: 6px;
+  padding: 0;
   border: 0;
   background: transparent;
   font: inherit;
@@ -199,6 +225,20 @@
 .g-signin-title { margin: 0; color: var(--ink); font-weight: 700; }
 .g-signin-note { margin: 10px 0 0; }
 .g-signout { margin-top: 12px; }
+
+/* Small Privacy link (sign-in card and the Ready-to-share panel). */
+.g-privacy-line { margin: 6px 0 0; }
+
+.g-privacy {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 12px;
+  color: var(--ink-soft);
+  text-decoration: underline;
+  text-decoration-color: var(--gold);
+  text-underline-offset: 3px;
+}
 
 /* Google draws its own button here (not restyled); this only gives it room. */
 .g-signin {
@@ -746,6 +786,18 @@ html.g-panel-open body { overflow: hidden; }
 }
 
 .g-p-signin { margin-top: 8px; text-align: center; }
+
+/* "or use my Google name" and Privacy on one line; Google's button gets a line of its own. */
+.g-p-googlespot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+}
+
+.g-p-googlespot .g-p-google { margin: 8px 0 0; }
+.g-p-googlespot .g-privacy { margin-top: 8px; }
+.g-p-googlespot .g-p-signin { flex-basis: 100%; }
 
 /* ---------- Remove / Keep question ---------- */
 

@@ -1,5 +1,5 @@
-/* Gallery main screen: subtitle, All / Mine switch, the photo grid with hearts (and
-   Delete on each tile of Photos by me), calm cards (loading, can't load, offline, empty),
+/* Gallery main screen: subtitle, All / Mine switch, the photo grid (under each photo
+   "By name" and the heart; Delete on each photo of Photos by me), calm cards (loading, can't load, offline, empty),
    the pinned Add photos button (or the paused / album-full note instead), photos being
    uploaded, a calm line when a delete didn't work, and the Google sign-in card at the
    bottom of Photos by me. */
@@ -40,16 +40,20 @@
     // is made once and never reloaded.
     const signInSpot = h("div", { class: "g-signin-spot", "data-g": "signin-spot", hidden: "" });
     const signInBox = h("div", { class: "g-signin", "data-g": "signin" });
+    // Opens in a new tab, so uploads that are running keep going.
+    const privacyLine = () => h("p", { class: "g-privacy-line" },
+      h("a", { class: "g-privacy", "data-g": "privacy-link", href: G.privacyUrl, target: "_blank", rel: "noopener" },
+        text.privacyLink));
     const signedOutCard = h("div", { class: "g-signin-card", "data-g": "signin-card" },
       h("p", { class: "g-signin-title" }, text.otherPhoneTitle), signInBox,
-      h("p", { class: "g-signin-note" }, text.signInNote));
+      h("p", { class: "g-signin-note" }, text.signInNote), privacyLine());
     const signedInLine = h("p", { class: "g-signin-title", "data-g": "signed-in" });
     const signOutButton = h("button", { type: "button", class: "btn btn-outline g-signout", "data-g": "signout",
       onclick: () => signOutNow() }, text.signOut);
     const signOutFailed = h("p", { class: "g-signin-status", "data-g": "signout-failed", role: "status", hidden: "" },
       text.signOutFailed);
     const signedInCard = h("div", { class: "g-signin-card", "data-g": "signin-card" }, signedInLine, signOutButton,
-      signOutFailed);
+      signOutFailed, privacyLine());
     let buttonMounted = false;
     if (signIn) signInSpot.append(signedOutCard, signedInCard);
     const addButton = h("button", { type: "button", class: "g-add", "data-g": "add", onclick: () => onAdd() }, text.addPhotos);
@@ -96,10 +100,15 @@
       parts.count = h("span", { class: "g-count" });
       parts.heart = h("button", { type: "button", class: "g-heart", "data-g": "heart", "aria-label": text.heartLabel },
         h("span", { class: "g-pill" }, parts.glyph, parts.count));
-      // Only on Photos by me; added to the tile there (see updateTile).
+      // Only on Photos by me; added to the photo there (see updateTile).
       parts.del = h("button", { type: "button", class: "g-del", "data-g": "tile-delete" },
         h("span", { class: "g-pill" }, text.delete));
-      parts.el = h("div", { class: "g-tile", "data-g": "tile", "data-id": p.id }, parts.open, parts.heart);
+      parts.shot = h("div", { class: "g-shot" }, parts.open);
+      // Under the photo: "By name" (one line, cut with … when long) and the heart.
+      parts.by = h("span", { class: "g-by", "data-g": "by" });
+      parts.name = null;
+      parts.el = h("div", { class: "g-tile", "data-g": "tile", "data-id": p.id }, parts.shot,
+        h("div", { class: "g-cap", "data-g": "caption" }, parts.by, parts.heart));
       if (parts.preview) {
         parts.waiting = true;
         probe(parts);
@@ -149,7 +158,7 @@
       const total = state.total;
       const canDelete = state.tab === "mine" && p.mine;
       const deleting = (state.deleting || []).includes(p.id);
-      if (canDelete && !t.del.parentNode) t.el.append(t.del);
+      if (canDelete && !t.del.parentNode) t.shot.append(t.del);
       else if (!canDelete && t.del.parentNode) t.del.remove();
       t.del.disabled = deleting;
       t.el.classList.toggle("is-deleting", deleting);
@@ -158,6 +167,11 @@
       t.heart.classList.toggle("is-on", p.hearted);
       t.glyph.textContent = p.hearted ? HEART_ON : HEART_OFF;
       t.count.textContent = String(p.hearts);
+      const name = String(p.by || "").trim();
+      if (name !== t.name) {
+        t.name = name;
+        t.by.replaceChildren(...(name ? [text.byPrefix + " ", h("b", null, name)] : [text.byGuest]));
+      }
     }
 
     // The first tile still on screen, so new photos added above don't move what the guest sees.
@@ -190,7 +204,9 @@
       parts.ring = h("div", { class: "g-ring" });
       parts.busy = h("div", { class: "g-up-busy" }, parts.ring);
       parts.failed = h("button", { type: "button", class: "g-up-failed" });
-      parts.el = h("div", { class: "g-tile g-up", "data-key": key }, parts.img, parts.busy, parts.failed);
+      // The empty caption keeps it as tall as the photo tiles.
+      parts.el = h("div", { class: "g-tile g-up", "data-key": key },
+        h("div", { class: "g-shot" }, parts.img, parts.busy, parts.failed), h("div", { class: "g-cap", "aria-hidden": "true" }));
       parts.el.addEventListener("click", () => { if (parts.el.dataset.g === "failed-tile") tapFailed(key); });
       return parts;
     }

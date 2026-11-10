@@ -508,6 +508,16 @@ a { color: inherit; }
 
 .coming-soon p { margin: 0; color: var(--ink-soft); }
 
+/* ---------- Privacy page (privacy.html) ---------- */
+
+.privacy-intro {
+  margin: 0 0 16px;
+  color: var(--ink-soft);
+  text-align: center;
+}
+
+.privacy .card p + p { margin-top: 10px; }
+
 /* ---------- Floating bars ---------- */
 
 .status-bar {

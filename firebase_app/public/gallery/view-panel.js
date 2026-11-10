@@ -1,6 +1,6 @@
 /* "Ready to share" bottom panel: the picked photos (× takes one out, ＋ More picks
    again), the guest's name, one Upload button, and the small "or use my Google name"
-   link (which becomes Google's button when tapped). Also the shared Remove / Keep
+   link (which becomes Google's button when tapped) with a small Privacy link. Also the shared Remove / Keep
    question. The phone's Back closes the panel (it adds one history entry while open). */
 (function () {
   "use strict";
@@ -48,7 +48,11 @@
     const googleLink = h("button", { type: "button", class: "g-p-google", "data-g": "use-google",
       onclick: () => useGoogle() }, text.useGoogleName);
     const googleBox = h("div", { class: "g-signin g-p-signin", "data-g": "signin" });
-    const googleSpot = h("div", { class: "g-p-googlespot" }, googleOn ? googleLink : "");
+    // The small Privacy link sits next to it (and stays under Google's button). It opens in a
+    // new tab, so the photos just picked aren't lost.
+    const privacyLink = h("a", { class: "g-privacy", "data-g": "privacy-link", href: G.privacyUrl,
+      target: "_blank", rel: "noopener" }, text.privacyLink);
+    const googleSpot = h("div", { class: "g-p-googlespot" }, googleOn ? [googleLink, privacyLink] : "");
     const closeButton = h("button", { type: "button", class: "g-p-close", "data-g": "panel-close",
       "aria-label": text.close, onclick: () => close() }, "×");
     const sheet = h("div", { class: "g-sheet", role: "dialog", "aria-modal": "true", "aria-labelledby": uid + "-title" },
@@ -168,7 +172,7 @@
 
     function useGoogle() {
       if (!googleOn || googleBox.isConnected) return;
-      googleSpot.replaceChildren(googleBox);
+      googleSpot.replaceChildren(googleBox, privacyLink);
       signIn.mountButton(googleBox);
     }
 

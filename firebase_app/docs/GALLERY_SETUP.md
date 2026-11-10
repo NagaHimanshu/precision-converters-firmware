@@ -160,12 +160,28 @@ buttons anywhere (guests can still share photos).
    - **User support email**: choose the wedding account
    - **Audience / User type**: **External**
    - **Contact information**: the wedding account's email
-   - Agree to the policy → **Create** (or **Save and continue** through the pages).
-4. **Scopes**: add nothing. The sign-in only uses the guest's name, which every app gets.
-5. **Publish**: go to **Audience** (or back to **OAuth consent screen**) → under
-   **Publishing status** press **Publish app** → **Confirm**. It should now say
-   **In production**. (While it says "Testing", only people you list can sign in.) No
-   Google review is needed because no extra scopes are used.
+   - Agree to the policy → **Create**.
+4. The **Overview** page may now say "You haven't configured any OAuth clients". That is
+   normal: 5b creates the client.
+5. Left menu → **Branding**:
+   - **App name** and **User support email**: as above.
+   - **App logo**: leave it **empty** (a logo makes Google review the app first).
+   - **Authorized domains** → **Add domain**, once for each:
+     - `rishika-vamsi-wedding.web.app`
+     - `rishika-vamsi-wedding.firebaseapp.com`
+   - **Application home page**: `https://rishika-vamsi-wedding.web.app`
+   - **Application privacy policy link**: `https://rishika-vamsi-wedding.web.app/privacy.html`
+     (the site's privacy page; its words are in `site-config.js` → `text.privacy`)
+   - **Developer contact information**: the wedding account's email → **Save**.
+6. **Scopes**: add nothing. The sign-in only uses the guest's name, which every app gets.
+7. **Publish**: left menu → **Audience** → under **Publishing status** press
+   **Publish app** → **Confirm**. It should now say **In production**. (While it says
+   "Testing", only people you list can sign in.) No Google review is needed because no
+   extra scopes are used and there is no logo.
+   If Google won't publish until the privacy page is online, deploy the main site now with
+   `firebase deploy --only hosting` (safe: the site isn't shared with guests yet), then
+   come back and press **Publish app**. The privacy policy link in the form stays the main
+   address above.
 
 ### 5b. The client ID
 

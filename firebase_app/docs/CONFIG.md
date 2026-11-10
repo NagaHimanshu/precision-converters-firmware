@@ -57,6 +57,8 @@ Setting it up (Drive, Apps Script, Google sign-in): [GALLERY_SETUP.md](GALLERY_S
 | `previewSizePx` | Longest side (pixels) of the small copy shown while photos are chosen and uploading. |
 | `progressTickMs` | How often the upload rings are redrawn. |
 | `progressEstimateMs` | Rough time to send one photo; the ring fills on this time scale (real sending progress can't be measured). |
+| `privacyUrl` | The privacy page (`privacy.html`), linked from the sign-in card on Photos by me and from the Ready-to-share panel. Its words: [`text.privacy`](#textprivacy-privacy-page). |
+| `privacyContactsUrl` | Where the privacy page's "Contact the family" buttons go (`./#contacts` = the Contacts screen). |
 
 Pausing uploads without a redeploy: see `gallery_uploads` in
 [SHEET_SETUP.md](SHEET_SETUP.md). The gallery wording is in
@@ -133,7 +135,9 @@ Placeholders in `{braces}` are filled in by the site; keep them.
 | `keepOpen` | Small line under the progress line |
 | `uploadFailed` | On a photo that didn't upload (tap it to try again) |
 | `unsupported` | On a chosen file that can't be read as a photo |
-| `by` | Name on a photo: `{name}` |
+| `by` | Name on a photo in the full-screen viewer: `{name}` |
+| `byPrefix` | Under each grid photo, before the name (the name follows in bold), e.g. `By` |
+| `byGuest` | Under each grid photo that has no name, e.g. `By a guest` |
 | `today` / `yesterday` | Photo time on those days: `{time}` |
 | `dayTime` | Photo time on other days: `{date}`, `{time}` |
 | `loading` | While the first photos are on their way |
@@ -144,6 +148,7 @@ Placeholders in `{braces}` are filled in by the site; keep them.
 | `confirmTitle` / `confirmRemove` / `confirmKeep` | The "remove this photo?" question and its two buttons |
 | `otherPhoneTitle` | Heading above Google's sign-in button at the end of Photos by me |
 | `signInNote` | Small line under that button |
+| `privacyLink` | Small link to the privacy page (sign-in card, signed in or out, and next to `useGoogleName` in the panel) |
 | `signedInAs` | Shown after signing in: `{name}` = the Google name |
 | `signedInNoName` | The same, when the Google account has no name |
 | `signOut` | Sign-out button |
@@ -159,6 +164,17 @@ Placeholders in `{braces}` are filled in by the site; keep them.
 | `errors.too_large` | … the photo is larger than the backend accepts |
 | `errors.rate_limited` | … too many uploads from one phone in an hour |
 | `errors.signin_failed` | … Google sign-in didn't work |
+
+### text.privacy (privacy page)
+The words of `privacy.html`. Plain text only (no `{placeholders}`); the page needs no
+Sheet, so it always opens.
+
+| Key | Where it shows |
+|---|---|
+| `title` | Title at the top of the page (and the browser tab) |
+| `intro` | Short line under the title |
+| `contactLink` | Button under a section marked `contact: true`; goes to `gallery.privacyContactsUrl` |
+| `sections` | The cards, in order: each `{ heading: "...", paragraphs: ["...", "..."] }`, plus `contact: true` for a "Contact the family" button. Add, remove or reword sections freely. |
 
 ## Gallery backend settings (apps-script/Config.gs)
 

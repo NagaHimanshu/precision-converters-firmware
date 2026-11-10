@@ -20,6 +20,7 @@ Gallery (guests share and heart photos; optional Google sign-in), Contacts.
 public/              everything that gets published
   index.html         page skeleton (no content)
   app.js             logic: loads the sheet, draws screens, search, countdown
+  privacy.html, privacy.js  privacy page (words in site-config.js, text.privacy)
   styles.css         layout; colours/fonts come from site-config.js
   site-config.js     settings (edit this)
   sw.js              offline support
